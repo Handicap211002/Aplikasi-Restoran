@@ -17,13 +17,14 @@ export function MenuCard({ item, onAdd }: Props) {
       className="bg-white rounded-xl shadow-lg p-3 flex flex-col items-center hover:scale-105 transition cursor-pointer"
       onClick={onAdd}
     >
-      {/* Gambar berbentuk kotak dengan border-radius 10px */}
-      <div className="relative w-44 h-34 mb-2">
+      {/* Gambar responsif dengan aspect ratio */}
+      <div className="relative w-full aspect-[4/3] mb-2">
         <Image
           src={item.image}
           alt={item.name}
           fill
           className="object-cover rounded-[10px]"
+          sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
         />
       </div>
       <h3 className="text-center text-sm font-bold text-gray-800">{item.name}</h3>
