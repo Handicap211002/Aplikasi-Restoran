@@ -40,9 +40,12 @@ export const Sidebar: FC<SidebarProps> = ({ isOpen, onSelectCategory, onClose, c
 
   return (
     <>
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/30 z-30 md:hidden" onClick={onClose} />
-      )}
+    {isOpen && (
+      <div 
+        className="fixed top-16 left-0 right-0 bottom-0 bg-black/30 z-30 md:hidden" 
+        onClick={onClose} 
+      />
+    )}
 
       <aside
         id="sidebar"
