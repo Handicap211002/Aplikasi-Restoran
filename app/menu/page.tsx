@@ -185,20 +185,22 @@ export default function MainMenuPage() {
     <div className="h-screen overflow-hidden relative">
       <Image src="/bg.png" alt="Background" fill className="object-cover -z-10" priority />
       <div className="absolute inset-0 bg-white/70 z-0" />
-
-      <Navbar
-        onToggleSidebar={handleToggleSidebar}
-        onToggleOrderPanel={handleToggleOrderPanel}
-      />
-
+<div className="z-50">
+  <Navbar
+    onToggleSidebar={handleToggleSidebar}
+    onToggleOrderPanel={handleToggleOrderPanel}
+  />
+</div>
       <div className="flex h-[calc(100%-64px)] relative z-10">
         {showSidebar && (
+            <div className="z-40">
           <Sidebar
             isOpen={showSidebar}
             onSelectCategory={handleScrollToCategory}
-            onClose={() => setShowSidebar(true)}
+            onClose={() => setShowSidebar(false)}
             currentCategory={currentCategory}
           />
+            </div>
         )}
 
         <main className="flex-1 overflow-y-auto p-6 space-y-10">
