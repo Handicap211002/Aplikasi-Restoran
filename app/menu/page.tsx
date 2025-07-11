@@ -196,7 +196,7 @@ export default function MainMenuPage() {
           <Sidebar
             isOpen={showSidebar}
             onSelectCategory={handleScrollToCategory}
-            onClose={() => setShowSidebar(false)}
+            onClose={() => setShowSidebar(true)}
             currentCategory={currentCategory}
           />
         )}
