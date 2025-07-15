@@ -5,6 +5,7 @@ import { FC } from 'react';
 interface NavbarProps {
   onToggleSidebar: () => void;
   onToggleOrderPanel: () => void;
+
 }
 
 export const Navbar: FC<NavbarProps> = ({ onToggleSidebar, onToggleOrderPanel }) => {

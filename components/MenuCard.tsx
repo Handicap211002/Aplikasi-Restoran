@@ -3,10 +3,11 @@ import Image from 'next/image';
 
 type Props = {
   item: {
-    id: number;
+    id: number | string;
     name: string;
     price: number;
     image: string;
+    description?: string;
   };
   onAdd: () => void;
 };

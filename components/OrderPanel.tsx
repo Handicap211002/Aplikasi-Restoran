@@ -10,6 +10,7 @@ interface OrderPanelProps {
   onIncrease: (index: number) => void;
   onDecrease: (index: number) => void;
   onRemove: (index: number) => void;
+    onCheckout?: () => void;
 }
 
 export const OrderPanel: FC<OrderPanelProps> = ({
@@ -119,7 +120,7 @@ export const OrderPanel: FC<OrderPanelProps> = ({
 
           {/* Footer */}
           <div className="mt-4">
-            <div className="rounded-xl bg-sky-600 p-4">
+            <div className="rounded-xl p-4" style={{ backgroundColor: '#007FAE' }}>
               <div className="flex justify-between text-white text-sm mb-2">
                 <span>{orderItems.length} items</span>
                 <span className="font-bold text-base">Rp.{total.toLocaleString()}</span>

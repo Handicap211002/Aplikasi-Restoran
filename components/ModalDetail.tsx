@@ -7,6 +7,7 @@ interface ModalDetailProps {
   item: MenuItem;
   onAdd: () => void;
   onClose: () => void;
+    onQuantityChange?: (quantity: number) => void;
 }
 
 export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
@@ -37,7 +38,7 @@ export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
 
         {/* Deskripsi */}
         <p className="text-sm text-center text-gray-700 mb-1">
-          Stir fried Lobster with Chef sambal Padang style
+            {item.description}
         </p>
 
         {/* Harga */}

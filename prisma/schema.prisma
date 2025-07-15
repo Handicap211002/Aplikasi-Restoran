@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl= env("DIRECT_URL")
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String
+  slug      String    @unique
+  menuItems MenuItem[]
+}
+
+model MenuItem {
+  id         Int      @id @default(autoincrement())
+  name       String
+  price      Int
+  image      String   // Add this line
+  description String   // << tambah ini
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId Int
+}
+
+
+
+

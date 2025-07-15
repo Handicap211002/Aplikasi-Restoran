@@ -9,7 +9,7 @@ interface SidebarProps {
   currentCategory: string;
 }
 
-const categoryMap: Record<string, string> = {
+const foodCategories: Record<string, string> = {
   'ALL SEAFOOD': 'seafood',
   'KIKI SIGNATURE': 'kiki',
   'SOUP': 'soup',
@@ -17,16 +17,28 @@ const categoryMap: Record<string, string> = {
   'VEGETABLES': 'vegetables',
   'PASTA & PIZZA': 'pasta',
   'SNACK & DESSERT': 'snack',
-  'SET LUNCH A': 'lunch-a',
-  'SET LUNCH B': 'lunch-b',
-  'SEAFOOD SET DINNER': 'seafood-dinner',
-  'LOBSTER BBQ SET DINNER': 'lobster-bbq',
-  'HOT POT DINNER': 'hot-pot',
-  'TABLE BBQ DINNER': 'table-bbq',
+  'SET LUNCH A': 'luncha',
+  'SET LUNCH B': 'lunchb',
+  'SEAFOOD SET DINNER': 'seafooddinner',
+  'LOBSTER BBQ SET DINNER': 'lobsterbbq',
+  'HOT POT DINNER': 'hotpot',
+  'TABLE BBQ DINNER': 'tablebbq',
+};
+
+const beverageCategories: Record<string, string> = {
+  'COCKTAILS & MOCKTAILS': 'cocktail',
+  'FRUIT JUICE': 'juice',
+  'FRESH YOUNG COCONUT': 'coconut',
+  'MILK SHAKE & SMOOTHIES': 'shake',
+  'BEER': 'beer',
+  'HOT / ICE TEA': 'tea',
+  'HOT / ICE COFFEE': 'coffee',
+  'GOURMET': 'gourmet',
+  'SOFT DRINKS / SODA': 'softdrink',
+  'MINERAL WATER': 'water',
 };
 
 export const Sidebar: FC<SidebarProps> = ({ isOpen, onSelectCategory, onClose, currentCategory }) => {
-  // Klik luar untuk tutup sidebar (mobile)
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const sidebar = document.getElementById('sidebar');
@@ -40,12 +52,12 @@ export const Sidebar: FC<SidebarProps> = ({ isOpen, onSelectCategory, onClose, c
 
   return (
     <>
-    {isOpen && (
-      <div 
-        className="fixed top-16 left-0 right-0 bottom-0 bg-black/30 z-30 md:hidden" 
-        onClick={onClose} 
-      />
-    )}
+      {isOpen && (
+        <div
+          className="fixed top-16 left-0 right-0 bottom-0 bg-black/30 z-30 md:hidden"
+          onClick={onClose}
+        />
+      )}
 
       <aside
         id="sidebar"
@@ -56,7 +68,7 @@ export const Sidebar: FC<SidebarProps> = ({ isOpen, onSelectCategory, onClose, c
         <div className="flex-grow">
           <h1 className="text-2xl font-bold mb-6 text-gray-800">FOOD</h1>
           <ul className="space-y-3 text-[15px] font-medium">
-            {Object.entries(categoryMap).map(([name, id]) => (
+            {Object.entries(foodCategories).map(([name, id]) => (
               <li
                 key={id}
                 onClick={() => {
@@ -74,19 +86,19 @@ export const Sidebar: FC<SidebarProps> = ({ isOpen, onSelectCategory, onClose, c
 
           <h2 className="text-2xl font-bold mt-6 mb-4 text-gray-800">BEVERAGES</h2>
           <ul className="space-y-3 text-[15px] font-medium">
-            {[
-              'COCKTAILS & MOCKTAILS',
-              'FRUIT JUICE',
-              'FRESH YOUNG COCONUT',
-              'MILK SHAKE & SMOOTHIES',
-              'BEER',
-              'HOT / ICE TEA',
-              'HOT / ICE COFFEE',
-              'GOURMET',
-              'SOFT DRINKS / SODA',
-              'MINERAL WATER',
-            ].map((item) => (
-              <li key={item} className="px-2">{item}</li>
+            {Object.entries(beverageCategories).map(([name, id]) => (
+              <li
+                key={id}
+                onClick={() => {
+                  onSelectCategory(id);
+                  if (window.innerWidth < 768) onClose();
+                }}
+                className={`cursor-pointer rounded px-2 py-1 hover:text-blue-500 ${
+                  currentCategory === id ? 'bg-white/70 text-blue-600 font-semibold' : ''
+                }`}
+              >
+                {name}
+              </li>
             ))}
           </ul>
         </div>
