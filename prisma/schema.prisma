@@ -16,15 +16,51 @@ model Category {
 }
 
 model MenuItem {
-  id         Int      @id @default(autoincrement())
+  id         Int         @id @default(autoincrement())
   name       String
   price      Int
-  image      String   // Add this line
-  description String   // << tambah ini
-  category   Category @relation(fields: [categoryId], references: [id])
+  image      String
+  description String
+  category   Category    @relation(fields: [categoryId], references: [id])
   categoryId Int
+  orderItems OrderItem[]  // Tambahkan ini untuk relasi balik ke OrderItem
 }
-
+model Order {
+  id             Int              @id @default(autoincrement())
+  note           String?
+  roomNumber     String?
+  customerName   String
+  orderType      OrderType
+  paymentMethod  PaymentMethod
+  totalOrder     Int
+  totalPrice     Int
+  status         OrderStatus       // status order berhasil/gagal
+  createdAt      DateTime          @default(now())
+  orderItems     OrderItem[]
+}
+model OrderItem {
+  id         Int       @id @default(autoincrement())
+  order      Order     @relation(fields: [orderId], references: [id])
+  orderId    Int
+  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id])
+  menuItemId Int
+  quantity   Int
+  price      Int
+}
+enum OrderType {
+  IN_RESTAURANT
+  DELIVERY_ROOM
+  TAKE_AWAY
+}
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  ROOM_CHARGE
+}
+enum OrderStatus {
+  SUCCESS
+  FAILED
+}
 
 
 

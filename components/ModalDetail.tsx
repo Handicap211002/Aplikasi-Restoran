@@ -1,20 +1,21 @@
 'use client';
 import Image from 'next/image';
-import { FC } from 'react';
+import { FC, useState } from 'react';
 import { MenuItem } from '@/types';
 
 interface ModalDetailProps {
   item: MenuItem;
-  onAdd: () => void;
+  onAdd: (note: string) => void;
   onClose: () => void;
-    onQuantityChange?: (quantity: number) => void;
 }
 
 export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
+  const [note, setNote] = useState('')  // <--- ini buat simpan input catatan
+
   return (
     <div className="fixed inset-0 bg-[#C8C8C8]/60 z-50 flex items-center justify-center">
       <div className="bg-white w-[90%] max-w-md rounded-xl shadow-xl p-4 relative border border-blue-200">
-        
+
         {/* Tombol X */}
         <button
           onClick={onClose}
@@ -37,9 +38,7 @@ export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
         </div>
 
         {/* Deskripsi */}
-        <p className="text-sm text-center text-gray-700 mb-1">
-            {item.description}
-        </p>
+        <p className="text-sm text-center text-gray-700 mb-1">{item.description}</p>
 
         {/* Harga */}
         <p className="text-center text-gray-600 font-semibold text-xl mb-3">
@@ -48,11 +47,11 @@ export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
 
         {/* Catatan */}
         <div className="relative mb-4">
-          <span className="absolute left-3 top-2.5 text-gray-400">
-            📝
-          </span>
+          <span className="absolute left-3 top-2.5 text-gray-400">📝</span>
           <input
             type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
             placeholder="Catatan"
             className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm bg-[#F2F2F2] placeholder-gray-500"
           />
@@ -60,7 +59,7 @@ export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
 
         {/* Tombol Add */}
         <button
-          onClick={onAdd}
+          onClick={() => onAdd(note)}  // <-- kirim note ke onAdd
           className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2"
         >
           🛒 <span>add</span>

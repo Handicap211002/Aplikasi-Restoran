@@ -7,7 +7,12 @@ import { Sidebar } from '../../components/Sidebar'
 import { OrderPanel } from '../../components/OrderPanel'
 import { ModalDetail } from '../../components/ModalDetail'
 import { MenuCard } from '../../components/MenuCard'
+import { OrderModal } from '../../components/OrderModal'
+import { PaymentMethodModal } from '../../components/PaymentMethodModal'
+import { SuccessModal } from '../../components/SuccessModal'
+import { PaymentMethod } from '@prisma/client'
 import { supabase } from '@/lib/supabaseClient'
+
 
 export default function MainMenuPage() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
@@ -17,6 +22,16 @@ export default function MainMenuPage() {
   const [showSidebar, setShowSidebar] = useState(false)
   const [showOrderPanel, setShowOrderPanel] = useState(false)
   const [currentCategory, setCurrentCategory] = useState<string>('')
+  const [showOrderModal, setShowOrderModal] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+
+  const [orderData, setOrderData] = useState({
+    roomNumber: '',
+    customerName: '',
+    orderType: 'IN_RESTAURANT' as 'IN_RESTAURANT' | 'DELIVERY_ROOM' | 'TAKE_AWAY',
+    paymentMethod: 'CASH' as 'CASH' | 'TRANSFER' | 'ROOM_CHARGE'
+  })
 
   const kikiRef = useRef<HTMLDivElement>(null)
   const soupRef = useRef<HTMLDivElement>(null)
@@ -117,6 +132,49 @@ export default function MainMenuPage() {
     water: waterRef,
   }
 
+    const handleOrderClick = () => {
+      setShowOrderModal(true)
+    }
+
+    const handleOrderModalNext = () => {
+      setShowOrderModal(false)
+      setShowPaymentModal(true)
+    }
+
+    const handlePaymentSelect = (method: PaymentMethod) => {
+      setOrderData({ ...orderData, paymentMethod: method })
+      handleSubmitOrder()
+    }
+
+    const handleSubmitOrder = async () => {
+      const { data: order, error } = await supabase.from('Order').insert([
+        {
+          note: orderItems.map(item => item.note).join(', '),
+          roomNumber: orderData.roomNumber,
+          customerName: orderData.customerName,
+          orderType: orderData.orderType,
+          paymentMethod: orderData.paymentMethod,
+          totalOrder: orderItems.length,
+          totalPrice: orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+          status: 'SUCCESS'
+        }
+      ]).select().single()
+
+      if (order) {
+        const orderItemsData = orderItems.map(item => ({
+          orderId: order.id,
+          menuItemId: item.id,
+          quantity: item.quantity,
+          price: item.price
+        }))
+        await supabase.from('OrderItem').insert(orderItemsData)
+        setShowPaymentModal(false)
+        setShowSuccessModal(true)
+      } else {
+        console.error(error)
+      }
+    }
+
   const handleScrollToCategory = (categoryId: string) => {
     setCurrentCategory(categoryId)
     const ref = categoryRefs[categoryId as keyof typeof categoryRefs]
@@ -135,24 +193,25 @@ export default function MainMenuPage() {
     setShowModal(false)
   }
 
-  const addToOrder = (item: MenuItem) => {
-    const index = orderItems.findIndex((i) => i.id === item.id)
-    if (index !== -1) {
-      const updated = [...orderItems]
-      updated[index].quantity += 1
-      setOrderItems(updated)
-    } else {
-      setOrderItems([
-        ...orderItems,
-        {
-          ...item,
-          quantity: 1,
-          note: 'Jangan pedas, garam sedikit',
-        },
-      ])
+    const addToOrder = (item: MenuItem, note: string) => {
+      const index = orderItems.findIndex((i) => i.id === item.id)
+      if (index !== -1) {
+        const updated = [...orderItems]
+        updated[index].quantity += 1
+        updated[index].note = note  // update note kalau perlu
+        setOrderItems(updated)
+      } else {
+        setOrderItems([
+          ...orderItems,
+          {
+            ...item,
+            quantity: 1,
+            note: note,
+          },
+        ])
+      }
+      setShowOrderPanel(true)
     }
-    setShowOrderPanel(true)
-  }
 
   const handleToggleSidebar = () => {
     setShowSidebar((prev) => {
@@ -369,6 +428,7 @@ export default function MainMenuPage() {
             onIncrease={handleIncrease}
             onDecrease={handleDecrease}
             onRemove={handleRemove}
+            onOrder={handleOrderClick}
           />
         )}
       </div>
@@ -376,13 +436,40 @@ export default function MainMenuPage() {
       {showModal && selectedItem && (
         <ModalDetail
           item={selectedItem}
-          onAdd={() => {
-            addToOrder(selectedItem)
+          onAdd={(note) => {
+            addToOrder(selectedItem, note)
             closeModal()
           }}
           onClose={closeModal}
         />
       )}
+      {showOrderModal && (
+      <OrderModal
+        isOpen={showOrderModal}
+        onClose={() => setShowOrderModal(false)}
+        onNext={handleOrderModalNext}
+        orderData={orderData}
+        setOrderData={setOrderData}
+      />
+    )}
+
+    {showPaymentModal && (
+      <PaymentMethodModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSelect={handlePaymentSelect}
+      />
+    )}
+
+    {showSuccessModal && (
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        orderData={orderData}
+        totalOrder={orderItems.length}
+        totalPrice={orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)}
+      />
+    )}
     </div>
   )
 }

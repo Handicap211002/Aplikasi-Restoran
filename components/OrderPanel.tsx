@@ -4,14 +4,15 @@ import { MenuItem } from '@/types';
 import Image from 'next/image';
 
 interface OrderPanelProps {
-  isOpen: boolean;
-  orderItems: MenuItem[];
-  onClose: () => void;
-  onIncrease: (index: number) => void;
-  onDecrease: (index: number) => void;
-  onRemove: (index: number) => void;
-    onCheckout?: () => void;
+  isOpen: boolean
+  orderItems: MenuItem[]
+  onClose: () => void
+  onIncrease: (index: number) => void
+  onDecrease: (index: number) => void
+  onRemove: (index: number) => void
+  onOrder: () => void // ⬅️ ini yang dulu gak ada makanya error
 }
+
 
 export const OrderPanel: FC<OrderPanelProps> = ({
   isOpen,
@@ -20,6 +21,7 @@ export const OrderPanel: FC<OrderPanelProps> = ({
   onIncrease,
   onDecrease,
   onRemove,
+  onOrder,
 }) => {
   const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -127,6 +129,7 @@ export const OrderPanel: FC<OrderPanelProps> = ({
               </div>
               <button
                 disabled={orderItems.length === 0}
+                onClick={() => onOrder()} 
                 className="w-full bg-white text-sky-700 font-bold py-2 rounded-xl transition hover:bg-gray-100 disabled:opacity-50"
               >
                 Order
