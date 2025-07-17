@@ -5,10 +5,10 @@ import { FC } from 'react';
 interface NavbarProps {
   onToggleSidebar: () => void;
   onToggleOrderPanel: () => void;
-
+  onSearch: (query: string) => void;
 }
 
-export const Navbar: FC<NavbarProps> = ({ onToggleSidebar, onToggleOrderPanel }) => {
+export const Navbar: FC<NavbarProps> = ({ onToggleSidebar, onToggleOrderPanel, onSearch }) => {
   return (
     <header className="w-full flex items-center justify-between bg-white px-6 py-1 shadow-md z-50 sticky top-0">
       {/* Kiri: Hamburger + Logo */}
@@ -55,7 +55,7 @@ export const Navbar: FC<NavbarProps> = ({ onToggleSidebar, onToggleOrderPanel })
       type="text"
       placeholder="Search"
       className="bg-transparent outline-none text-sm placeholder:text-gray-400 w-full"
-       />
+      onChange={(e) => onSearch(e.target.value)}  />
      </div>
 
         {/* Keranjang */}

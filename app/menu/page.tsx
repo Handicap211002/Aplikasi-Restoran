@@ -25,6 +25,9 @@ export default function MainMenuPage() {
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filteredMenuItems, setFilteredMenuItems] = useState<MenuItem[]>([])
+
 
   const [orderData, setOrderData] = useState({
     roomNumber: '',
@@ -183,6 +186,26 @@ export default function MainMenuPage() {
     }
   }
 
+ const handleSearch = (query: string) => {
+  setSearchQuery(query)
+
+  if (query.trim() === '') {
+    setFilteredMenuItems([]) // kosongkan saat input kosong
+    return
+  }
+
+  const lowerQuery = query.toLowerCase()
+
+  const filtered = menuItems.filter((item) =>
+    item.name.toLowerCase().includes(lowerQuery) ||
+    item.description.toLowerCase().includes(lowerQuery) ||
+    item.category?.name.toLowerCase().includes(lowerQuery)
+  )
+
+  setFilteredMenuItems(filtered)
+}
+
+
   const openModal = (item: MenuItem) => {
     setSelectedItem({ ...item, quantity: 1 })
     setShowModal(true)
@@ -306,6 +329,7 @@ export default function MainMenuPage() {
         <Navbar
           onToggleSidebar={handleToggleSidebar}
           onToggleOrderPanel={handleToggleOrderPanel}
+          onSearch={handleSearch}
         />
       </div>
       <div className="flex h-[calc(100%-64px)] relative z-10">
@@ -320,87 +344,10 @@ export default function MainMenuPage() {
           </div>
         )}
 
-      <main className="flex-1 overflow-y-auto p-6 space-y-10">
-        {[
-          'ALL SEAFOOD',
-          'KIKI SIGNATURE',
-          'SOUP',
-          'MAIN COURSE',
-          'VEGETABLES',
-          'PASTA & PIZZA',
-          'SNACK & DESSERT',
-          'SET LUNCH A',
-          'SET LUNCH B',
-          'SEAFOOD SET DINNER',
-          'LOBSTER BBQ SET DINNER',
-          'HOT POT DINNER',
-          'TABLE BBQ DINNER',
-          'COCKTAILS & MOCKTAILS',
-          'FRUIT JUICE',
-          'FRESH YOUNG COCONUT',
-          'MILK SHAKE & SMOOTHIES',
-          'BEER',
-          'HOT / ICE TEA',
-          'HOT / ICE COFFEE',
-          'GOURMET',
-          'SOFT DRINKS / SODA',
-          'MINERAL WATER',
-        ].map((categoryName) => (
-          <section
-            key={categoryName}
-            ref={
-              categoryName === 'ALL SEAFOOD'
-                ? seafoodRef
-                : categoryName === 'KIKI SIGNATURE'
-                ? kikiRef
-                : categoryName === 'SOUP'
-                ? soupRef
-                : categoryName === 'MAIN COURSE'
-                ? mainRef
-                : categoryName === 'VEGETABLES'
-                ? vegetablesRef
-                : categoryName === 'PASTA & PIZZA'
-                ? pastaRef
-                : categoryName === 'SNACK & DESSERT'
-                ? snackRef
-                : categoryName === 'SET LUNCH A'
-                ? lunchaRef
-                : categoryName === 'SET LUNCH B'
-                ? lunchbRef
-                : categoryName === 'SEAFOOD SET DINNER'
-                ? seafooddinnerRef
-                : categoryName === 'LOBSTER BBQ SET DINNER'
-                ? lobsterbbqRef
-                : categoryName === 'HOT POT DINNER'
-                ? hotpotRef
-                : categoryName === 'TABLE BBQ DINNER'
-                ? tablebbqRef
-                : categoryName === 'COCKTAILS & MOCKTAILS'
-                ? cocktailRef
-                : categoryName === 'FRUIT JUICE'
-                ? juiceRef
-                : categoryName === 'FRESH YOUNG COCONUT'
-                ? coconutRef
-                : categoryName === 'MILK SHAKE & SMOOTHIES'
-                ? shakeRef
-                : categoryName === 'BEER'
-                ? beerRef
-                : categoryName === 'HOT / ICE TEA'
-                ? teaRef
-                : categoryName === 'HOT / ICE COFFEE'
-                ? coffeeRef
-                : categoryName === 'GOURMET'
-                ? gourmetRef
-                : categoryName === 'SOFT DRINKS / SODA'
-                ? softdrinkRef
-                : waterRef
-            }
-            data-category={categoryName.toLowerCase().replace(/\s/g, '')}
-            className="scroll-mt-12"
-          >
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">
-              {categoryName}
-            </h2>
+<main className="flex-1 overflow-y-auto p-6 pt-[100px] space-y-10">
+        {searchQuery.trim() !== '' ? (
+          <>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Search Results</h2>
             <div
               className={`grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${
                 showSidebar || showOrderPanel
@@ -408,18 +355,119 @@ export default function MainMenuPage() {
                   : 'xl:grid-cols-6 2xl:grid-cols-7'
               }`}
             >
-              {menuByCategory[categoryName]?.map((item) => (
-                <MenuCard
-                  key={item.id}
-                  item={item}
-                  onAdd={() => openModal(item)}
-                />
-              ))}
+              {filteredMenuItems.length > 0 ? (
+                filteredMenuItems.map((item) => (
+                  <MenuCard
+                    key={item.id}
+                    item={item}
+                    onAdd={() => openModal(item)}
+                  />
+                ))
+              ) : (
+                <p className="text-gray-600 col-span-full">No results found.</p>
+              )}
             </div>
-          </section>
-        ))}
+          </>
+        ) : (
+          [
+            'ALL SEAFOOD',
+            'KIKI SIGNATURE',
+            'SOUP',
+            'MAIN COURSE',
+            'VEGETABLES',
+            'PASTA & PIZZA',
+            'SNACK & DESSERT',
+            'SET LUNCH A',
+            'SET LUNCH B',
+            'SEAFOOD SET DINNER',
+            'LOBSTER BBQ SET DINNER',
+            'HOT POT DINNER',
+            'TABLE BBQ DINNER',
+            'COCKTAILS & MOCKTAILS',
+            'FRUIT JUICE',
+            'FRESH YOUNG COCONUT',
+            'MILK SHAKE & SMOOTHIES',
+            'BEER',
+            'HOT / ICE TEA',
+            'HOT / ICE COFFEE',
+            'GOURMET',
+            'SOFT DRINKS / SODA',
+            'MINERAL WATER',
+          ].map((categoryName) => (
+            <section
+              key={categoryName}
+              ref={
+                categoryName === 'ALL SEAFOOD'
+                  ? seafoodRef
+                  : categoryName === 'KIKI SIGNATURE'
+                  ? kikiRef
+                  : categoryName === 'SOUP'
+                  ? soupRef
+                  : categoryName === 'MAIN COURSE'
+                  ? mainRef
+                  : categoryName === 'VEGETABLES'
+                  ? vegetablesRef
+                  : categoryName === 'PASTA & PIZZA'
+                  ? pastaRef
+                  : categoryName === 'SNACK & DESSERT'
+                  ? snackRef
+                  : categoryName === 'SET LUNCH A'
+                  ? lunchaRef
+                  : categoryName === 'SET LUNCH B'
+                  ? lunchbRef
+                  : categoryName === 'SEAFOOD SET DINNER'
+                  ? seafooddinnerRef
+                  : categoryName === 'LOBSTER BBQ SET DINNER'
+                  ? lobsterbbqRef
+                  : categoryName === 'HOT POT DINNER'
+                  ? hotpotRef
+                  : categoryName === 'TABLE BBQ DINNER'
+                  ? tablebbqRef
+                  : categoryName === 'COCKTAILS & MOCKTAILS'
+                  ? cocktailRef
+                  : categoryName === 'FRUIT JUICE'
+                  ? juiceRef
+                  : categoryName === 'FRESH YOUNG COCONUT'
+                  ? coconutRef
+                  : categoryName === 'MILK SHAKE & SMOOTHIES'
+                  ? shakeRef
+                  : categoryName === 'BEER'
+                  ? beerRef
+                  : categoryName === 'HOT / ICE TEA'
+                  ? teaRef
+                  : categoryName === 'HOT / ICE COFFEE'
+                  ? coffeeRef
+                  : categoryName === 'GOURMET'
+                  ? gourmetRef
+                  : categoryName === 'SOFT DRINKS / SODA'
+                  ? softdrinkRef
+                  : waterRef
+              }
+              data-category={categoryName.toLowerCase().replace(/\s/g, '')}
+              className="scroll-mt-[100px]"
+            >
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">
+                {categoryName}
+              </h2>
+              <div
+                className={`grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${
+                  showSidebar || showOrderPanel
+                    ? 'xl:grid-cols-4 2xl:grid-cols-5'
+                    : 'xl:grid-cols-6 2xl:grid-cols-7'
+                }`}
+              >
+                {menuByCategory[categoryName]?.map((item) => (
+                  <MenuCard
+                    key={item.id}
+                    item={item}
+                    onAdd={() => openModal(item)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))
+        )}
       </main>
-
         {showOrderPanel && (
           <OrderPanel
             isOpen={showOrderPanel}

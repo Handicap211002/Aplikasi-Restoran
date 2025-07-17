@@ -91,7 +91,6 @@ export const Sidebar: FC<SidebarProps> = ({ isOpen, onSelectCategory, onClose, c
                 key={id}
                 onClick={() => {
                   onSelectCategory(id);
-                  if (window.innerWidth < 768) onClose();
                 }}
                 className={`cursor-pointer rounded px-2 py-1 hover:text-blue-500 ${
                   currentCategory === id ? 'bg-white/70 text-blue-600 font-semibold' : ''
