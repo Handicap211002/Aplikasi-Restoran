@@ -1,6 +1,6 @@
 'use client';
 import Image from 'next/image';
-import { FC, useState } from 'react';
+import { FC, useState, useRef, useEffect } from 'react';
 import { MenuItem } from '@/types';
 
 interface ModalDetailProps {
@@ -10,24 +10,33 @@ interface ModalDetailProps {
 }
 
 export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
-  const [note, setNote] = useState('')  // <--- ini buat simpan input catatan
+  const [note, setNote] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   return (
-    <div className="fixed inset-0 bg-[#C8C8C8]/60 z-50 flex items-center justify-center">
-      <div className="bg-white w-[90%] max-w-md rounded-xl shadow-xl p-4 relative border border-blue-200">
-
-        {/* Tombol X */}
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onAdd(note);
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white w-[90%] max-w-md rounded-xl shadow-xl p-4 relative border border-blue-200"
+      >
         <button
           onClick={onClose}
+          type="button"
           className="absolute top-3 right-3 text-red-600 hover:text-red-800 text-xl font-bold"
         >
           ×
         </button>
 
-        {/* Nama Makanan */}
         <h3 className="text-2xl font-bold text-center text-blue-900 mb-3">{item.name}</h3>
 
-        {/* Gambar */}
         <div className="w-full h-48 relative mb-4 rounded-lg overflow-hidden">
           <Image
             src={item.image}
@@ -37,18 +46,16 @@ export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
           />
         </div>
 
-        {/* Deskripsi */}
         <p className="text-sm text-center text-gray-700 mb-1">{item.description}</p>
 
-        {/* Harga */}
         <p className="text-center text-gray-600 font-semibold text-xl mb-3">
           Rp. {item.price.toLocaleString()}
         </p>
 
-        {/* Catatan */}
         <div className="relative mb-4">
           <span className="absolute left-3 top-2.5 text-gray-400">📝</span>
           <input
+            ref={inputRef}
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -57,14 +64,13 @@ export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
           />
         </div>
 
-        {/* Tombol Add */}
         <button
-          onClick={() => onAdd(note)}  // <-- kirim note ke onAdd
+          type="submit"
           className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2"
         >
           🛒 <span>add</span>
         </button>
-      </div>
+      </form>
     </div>
   );
 };

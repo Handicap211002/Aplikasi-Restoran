@@ -150,31 +150,43 @@ export default function MainMenuPage() {
     }
 
     const handleSubmitOrder = async () => {
-      const { data: order, error } = await supabase.from('Order').insert([
-        {
-          note: orderItems.map(item => item.note).join(', '),
+      
+      try {
+        const payload = {
           roomNumber: orderData.roomNumber,
           customerName: orderData.customerName,
           orderType: orderData.orderType,
           paymentMethod: orderData.paymentMethod,
-          totalOrder: orderItems.length,
-          totalPrice: orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
-          status: 'SUCCESS'
+          items: orderItems.map(item => ({
+            menuItemId: item.id,
+            quantity: item.quantity,
+            price: item.price,
+            note: item.note || '',
+          })),
         }
-      ]).select().single()
 
-      if (order) {
-        const orderItemsData = orderItems.map(item => ({
-          orderId: order.id,
-          menuItemId: item.id,
-          quantity: item.quantity,
-          price: item.price
-        }))
-        await supabase.from('OrderItem').insert(orderItemsData)
+        // 🔍 Tambahkan console.log untuk debug payload
+        console.log('Payload dikirim ke /api/order:', payload)
+
+        const res = await fetch('/api/order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        })
+
+        if (!res.ok) {
+          throw new Error('Failed to place order')
+        }
+
+        const order = await res.json()
+
+        // Tampilkan SuccessModal
         setShowPaymentModal(false)
         setShowSuccessModal(true)
-      } else {
-        console.error(error)
+      } catch (err) {
+        console.error('Order failed:', err)
       }
     }
 
@@ -290,6 +302,7 @@ export default function MainMenuPage() {
           id,
           name,
           price,
+          stock,
           image,
           description,
           category:Category (
@@ -513,7 +526,18 @@ export default function MainMenuPage() {
       <SuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
-        orderData={orderData}
+        orderData={{
+          roomNumber: orderData.roomNumber,
+          customerName: orderData.customerName,
+          orderType: orderData.orderType,
+          paymentMethod: orderData.paymentMethod,
+          items: orderItems.map(item => ({
+            menuItemId: item.id,
+            quantity: item.quantity,
+            price: item.price,
+            note: item.note || ''
+          }))
+        }}
         totalOrder={orderItems.length}
         totalPrice={orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)}
       />

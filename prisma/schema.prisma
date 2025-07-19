@@ -3,64 +3,67 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl= env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Category {
-  id        Int       @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   name      String
-  slug      String    @unique
+  slug      String     @unique
   menuItems MenuItem[]
 }
 
 model MenuItem {
-  id         Int         @id @default(autoincrement())
-  name       String
-  price      Int
-  image      String
+  id          Int         @id @default(autoincrement())
+  name        String
+  price       Int
+  image       String
   description String
-  category   Category    @relation(fields: [categoryId], references: [id])
-  categoryId Int
-  orderItems OrderItem[]  // Tambahkan ini untuk relasi balik ke OrderItem
+  categoryId  Int
+  stock       Int         @default(0)
+  category    Category    @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
 }
+
 model Order {
-  id             Int              @id @default(autoincrement())
-  note           String?
-  roomNumber     String?
-  customerName   String
-  orderType      OrderType
-  paymentMethod  PaymentMethod
-  totalOrder     Int
-  totalPrice     Int
-  status         OrderStatus       // status order berhasil/gagal
-  createdAt      DateTime          @default(now())
-  orderItems     OrderItem[]
+  id            Int           @id @default(autoincrement())
+  roomNumber    String?
+  customerName  String
+  orderType     OrderType
+  paymentMethod PaymentMethod
+  totalOrder    Int
+  totalPrice    Int
+  status        OrderStatus
+  createdAt     DateTime      @default(now())
+  orderItems    OrderItem[]
 }
+
 model OrderItem {
-  id         Int       @id @default(autoincrement())
-  order      Order     @relation(fields: [orderId], references: [id])
+  id         Int      @id @default(autoincrement())
   orderId    Int
-  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id])
   menuItemId Int
   quantity   Int
   price      Int
+  note       String?
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  order      Order    @relation(fields: [orderId], references: [id])
 }
+
 enum OrderType {
   IN_RESTAURANT
   DELIVERY_ROOM
   TAKE_AWAY
 }
+
 enum PaymentMethod {
   CASH
   TRANSFER
   ROOM_CHARGE
 }
+
 enum OrderStatus {
   SUCCESS
   FAILED
 }
-
-
-

@@ -1,4 +1,5 @@
 'use client'
+
 import { FC } from 'react'
 import { FaTimes, FaCreditCard } from 'react-icons/fa'
 
@@ -20,7 +21,13 @@ interface OrderModalProps {
   }>>
 }
 
-export const OrderModal: FC<OrderModalProps> = ({ isOpen, onClose, onNext, orderData, setOrderData }) => {
+export const OrderModal: FC<OrderModalProps> = ({
+  isOpen,
+  onClose,
+  onNext,
+  orderData,
+  setOrderData
+}) => {
   if (!isOpen) return null
 
   return (
@@ -38,10 +45,12 @@ export const OrderModal: FC<OrderModalProps> = ({ isOpen, onClose, onNext, order
         {/* Room Number */}
         <div className="relative">
           <input
-            type="text"
+            type="tel" // hanya angka + muncul keypad angka di HP
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={orderData.roomNumber}
-            onChange={(e) => setOrderData((prev) => ({ ...prev, roomNumber: e.target.value }))}
-            placeholder="Number Room"
+            onChange={(e) => setOrderData((prev) => ({ ...prev, roomNumber: e.target.value.replace(/\D/g, '') }))}
+            placeholder="Room Number"
             className="w-full border border-gray-300 rounded-lg px-10 py-3 text-sm"
           />
           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">🏨</span>
@@ -61,7 +70,6 @@ export const OrderModal: FC<OrderModalProps> = ({ isOpen, onClose, onNext, order
 
         {/* Order Type */}
         <h2 className="text-2xl font-bold text-center text-blue-900">ORDER TYPE</h2>
-
         <div className="flex flex-wrap justify-center gap-3">
           {['IN_RESTAURANT', 'DELIVERY_ROOM', 'TAKE_AWAY'].map((type) => (
             <button
