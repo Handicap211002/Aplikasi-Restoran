@@ -27,48 +27,8 @@ export const SuccessModal: FC<SuccessModalProps> = ({
   totalOrder,
   totalPrice
 }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-const hasSubmitted = useRef(false)
-
-useEffect(() => {
-  if (isOpen && !hasSubmitted.current) {
-    const submitOrder = async () => {
-      setIsSubmitting(true)
-      setError(null)
-
-      try {
-        const res = await fetch('/api/order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...orderData,
-            totalOrder,
-            totalPrice,
-          }),
-        })
-
-        if (!res.ok) {
-          const errorData = await res.json()
-          throw new Error(errorData.error || 'Gagal menyimpan order')
-        }
-
-        const result = await res.json()
-        console.log('Order berhasil:', result)
-        hasSubmitted.current = true // ✅ tandai sudah submit
-      } catch (err: any) {
-        console.error('Gagal kirim order:', err)
-        setError(err.message || 'Terjadi kesalahan')
-      } finally {
-        setIsSubmitting(false)
-      }
-    }
-
-    submitOrder()
-  }
-}, [isOpen, orderData, totalOrder, totalPrice])
-
+  const [isSubmitting] = useState(false)
+  const [error] = useState<string | null>(null)
 
   if (!isOpen) return null
 
