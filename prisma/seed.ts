@@ -96,100 +96,100 @@ async function main() {
       { name: 'Lychee Martini', price: 95000, image: '/cocktail3.png', description: 'Vodka with lychee.', categoryId: getCategoryId('cocktail') },
       { name: 'Fruit Punch', price: 70000, image: '/cocktail4.png', description: 'Mixed tropical fruits drink.', categoryId: getCategoryId('cocktail') },
       // FRUIT JUICE
-{ name: 'Orange Juice', price: 40000, image: '/juice1.png', description: 'Freshly squeezed orange juice.', categoryId: getCategoryId('juice') },
-{ name: 'Apple Juice', price: 40000, image: '/juice2.png', description: 'Chilled apple juice.', categoryId: getCategoryId('juice') },
-{ name: 'Carrot Juice', price: 35000, image: '/juice3.png', description: 'Healthy carrot juice.', categoryId: getCategoryId('juice') },
-{ name: 'Mix Fruit Juice', price: 45000, image: '/juice4.png', description: 'Blend of seasonal fruits.', categoryId: getCategoryId('juice') },
+      { name: 'Orange Juice', price: 40000, image: '/juice1.png', description: 'Freshly squeezed orange juice.', categoryId: getCategoryId('juice') },
+      { name: 'Apple Juice', price: 40000, image: '/juice2.png', description: 'Chilled apple juice.', categoryId: getCategoryId('juice') },
+      { name: 'Carrot Juice', price: 35000, image: '/juice3.png', description: 'Healthy carrot juice.', categoryId: getCategoryId('juice') },
+      { name: 'Mix Fruit Juice', price: 45000, image: '/juice4.png', description: 'Blend of seasonal fruits.', categoryId: getCategoryId('juice') },
 
-// FRESH YOUNG COCONUT
-{ name: 'Coconut Original', price: 35000, image: '/coconut1.png', description: 'Fresh young coconut water.', categoryId: getCategoryId('coconut') },
-{ name: 'Coconut Lemon', price: 38000, image: '/coconut2.png', description: 'Coconut water with lemon.', categoryId: getCategoryId('coconut') },
-{ name: 'Coconut Ice', price: 37000, image: '/coconut3.png', description: 'Chilled coconut with ice.', categoryId: getCategoryId('coconut') },
-{ name: 'Coconut Milkshake', price: 42000, image: '/coconut4.png', description: 'Coconut blended with milk.', categoryId: getCategoryId('coconut') },
+      // FRESH YOUNG COCONUT
+      { name: 'Coconut Original', price: 35000, image: '/coconut1.png', description: 'Fresh young coconut water.', categoryId: getCategoryId('coconut') },
+      { name: 'Coconut Lemon', price: 38000, image: '/coconut2.png', description: 'Coconut water with lemon.', categoryId: getCategoryId('coconut') },
+      { name: 'Coconut Ice', price: 37000, image: '/coconut3.png', description: 'Chilled coconut with ice.', categoryId: getCategoryId('coconut') },
+      { name: 'Coconut Milkshake', price: 42000, image: '/coconut4.png', description: 'Coconut blended with milk.', categoryId: getCategoryId('coconut') },
 
-// MILK SHAKE & SMOOTHIES
-{ name: 'Vanilla Milkshake', price: 45000, image: '/shake1.png', description: 'Classic vanilla milkshake.', categoryId: getCategoryId('shake') },
-{ name: 'Strawberry Smoothie', price: 48000, image: '/shake2.png', description: 'Strawberry yogurt smoothie.', categoryId: getCategoryId('shake') },
-{ name: 'Mango Milkshake', price: 47000, image: '/shake3.png', description: 'Mango blended with fresh milk.', categoryId: getCategoryId('shake') },
-{ name: 'Choco Banana Smoothie', price: 50000, image: '/shake4.png', description: 'Banana and chocolate blend.', categoryId: getCategoryId('shake') },
+      // MILK SHAKE & SMOOTHIES
+      { name: 'Vanilla Milkshake', price: 45000, image: '/shake1.png', description: 'Classic vanilla milkshake.', categoryId: getCategoryId('shake') },
+      { name: 'Strawberry Smoothie', price: 48000, image: '/shake2.png', description: 'Strawberry yogurt smoothie.', categoryId: getCategoryId('shake') },
+      { name: 'Mango Milkshake', price: 47000, image: '/shake3.png', description: 'Mango blended with fresh milk.', categoryId: getCategoryId('shake') },
+      { name: 'Choco Banana Smoothie', price: 50000, image: '/shake4.png', description: 'Banana and chocolate blend.', categoryId: getCategoryId('shake') },
 
-// BEER
-{ name: 'Bintang Large', price: 55000, image: '/beer1.png', description: 'Popular Indonesian lager.', categoryId: getCategoryId('beer') },
-{ name: 'Heineken', price: 60000, image: '/beer2.png', description: 'International premium beer.', categoryId: getCategoryId('beer') },
-{ name: 'Guinness Stout', price: 65000, image: '/beer3.png', description: 'Rich dark stout beer.', categoryId: getCategoryId('beer') },
-{ name: 'Carlsberg', price: 58000, image: '/beer4.png', description: 'Crisp and refreshing lager.', categoryId: getCategoryId('beer') },
+      // BEER
+      { name: 'Bintang Large', price: 55000, image: '/beer1.png', description: 'Popular Indonesian lager.', categoryId: getCategoryId('beer') },
+      { name: 'Heineken', price: 60000, image: '/beer2.png', description: 'International premium beer.', categoryId: getCategoryId('beer') },
+      { name: 'Guinness Stout', price: 65000, image: '/beer3.png', description: 'Rich dark stout beer.', categoryId: getCategoryId('beer') },
+      { name: 'Carlsberg', price: 58000, image: '/beer4.png', description: 'Crisp and refreshing lager.', categoryId: getCategoryId('beer') },
 
-// HOT / ICE TEA
-{ name: 'Hot Black Tea', price: 25000, image: '/tea1.png', description: 'Hot brewed black tea.', categoryId: getCategoryId('tea') },
-{ name: 'Iced Lemon Tea', price: 28000, image: '/tea2.png', description: 'Iced tea with lemon.', categoryId: getCategoryId('tea') },
-{ name: 'Hot Jasmine Tea', price: 27000, image: '/tea3.png', description: 'Aromatic jasmine tea.', categoryId: getCategoryId('tea') },
-{ name: 'Iced Lychee Tea', price: 30000, image: '/tea4.png', description: 'Iced tea with lychee fruit.', categoryId: getCategoryId('tea') },
+      // HOT / ICE TEA
+      { name: 'Hot Black Tea', price: 25000, image: '/tea1.png', description: 'Hot brewed black tea.', categoryId: getCategoryId('tea') },
+      { name: 'Iced Lemon Tea', price: 28000, image: '/tea2.png', description: 'Iced tea with lemon.', categoryId: getCategoryId('tea') },
+      { name: 'Hot Jasmine Tea', price: 27000, image: '/tea3.png', description: 'Aromatic jasmine tea.', categoryId: getCategoryId('tea') },
+      { name: 'Iced Lychee Tea', price: 30000, image: '/tea4.png', description: 'Iced tea with lychee fruit.', categoryId: getCategoryId('tea') },
 
-// HOT / ICE COFFEE
-{ name: 'Hot Americano', price: 30000, image: '/coffee1.png', description: 'Classic black coffee.', categoryId: getCategoryId('coffee') },
-{ name: 'Iced Latte', price: 35000, image: '/coffee2.png', description: 'Chilled milk coffee.', categoryId: getCategoryId('coffee') },
-{ name: 'Hot Cappuccino', price: 35000, image: '/coffee3.png', description: 'Espresso with frothed milk.', categoryId: getCategoryId('coffee') },
-{ name: 'Iced Caramel Macchiato', price: 40000, image: '/coffee4.png', description: 'Sweet iced coffee with caramel.', categoryId: getCategoryId('coffee') },
+      // HOT / ICE COFFEE
+      { name: 'Hot Americano', price: 30000, image: '/coffee1.png', description: 'Classic black coffee.', categoryId: getCategoryId('coffee') },
+      { name: 'Iced Latte', price: 35000, image: '/coffee2.png', description: 'Chilled milk coffee.', categoryId: getCategoryId('coffee') },
+      { name: 'Hot Cappuccino', price: 35000, image: '/coffee3.png', description: 'Espresso with frothed milk.', categoryId: getCategoryId('coffee') },
+      { name: 'Iced Caramel Macchiato', price: 40000, image: '/coffee4.png', description: 'Sweet iced coffee with caramel.', categoryId: getCategoryId('coffee') },
 
-// GOURMET
-{ name: 'Grilled Australian Ribeye', price: 250000, image: '/gourmet1.png', description: 'Tender ribeye steak.', categoryId: getCategoryId('gourmet') },
-{ name: 'Lamb Chop', price: 230000, image: '/gourmet2.png', description: 'Grilled lamb with rosemary.', categoryId: getCategoryId('gourmet') },
-{ name: 'Roast Duck', price: 200000, image: '/gourmet3.png', description: 'Crispy roasted duck.', categoryId: getCategoryId('gourmet') },
-{ name: 'Salmon Teriyaki', price: 220000, image: '/gourmet4.png', description: 'Grilled salmon in teriyaki sauce.', categoryId: getCategoryId('gourmet') },
+      // GOURMET
+      { name: 'Grilled Australian Ribeye', price: 250000, image: '/gourmet1.png', description: 'Tender ribeye steak.', categoryId: getCategoryId('gourmet') },
+      { name: 'Lamb Chop', price: 230000, image: '/gourmet2.png', description: 'Grilled lamb with rosemary.', categoryId: getCategoryId('gourmet') },
+      { name: 'Roast Duck', price: 200000, image: '/gourmet3.png', description: 'Crispy roasted duck.', categoryId: getCategoryId('gourmet') },
+      { name: 'Salmon Teriyaki', price: 220000, image: '/gourmet4.png', description: 'Grilled salmon in teriyaki sauce.', categoryId: getCategoryId('gourmet') },
 
-// SOFT DRINKS / SODA
-{ name: 'Coca Cola', price: 25000, image: '/softdrink1.png', description: 'Chilled Coca Cola.', categoryId: getCategoryId('softdrink') },
-{ name: 'Sprite', price: 25000, image: '/softdrink2.png', description: 'Lemon lime soda.', categoryId: getCategoryId('softdrink') },
-{ name: 'Fanta', price: 25000, image: '/softdrink3.png', description: 'Fruit flavored soda.', categoryId: getCategoryId('softdrink') },
-{ name: 'Soda Water', price: 22000, image: '/softdrink4.png', description: 'Sparkling soda water.', categoryId: getCategoryId('softdrink') },
+      // SOFT DRINKS / SODA
+      { name: 'Coca Cola', price: 25000, image: '/softdrink1.png', description: 'Chilled Coca Cola.', categoryId: getCategoryId('softdrink') },
+      { name: 'Sprite', price: 25000, image: '/softdrink2.png', description: 'Lemon lime soda.', categoryId: getCategoryId('softdrink') },
+      { name: 'Fanta', price: 25000, image: '/softdrink3.png', description: 'Fruit flavored soda.', categoryId: getCategoryId('softdrink') },
+      { name: 'Soda Water', price: 22000, image: '/softdrink4.png', description: 'Sparkling soda water.', categoryId: getCategoryId('softdrink') },
 
-// MINERAL WATER
-{ name: 'Aqua 600ml', price: 12000, image: '/water1.png', description: 'Mineral water 600ml.', categoryId: getCategoryId('water') },
-{ name: 'Equil Sparkling', price: 35000, image: '/water2.png', description: 'Premium sparkling water.', categoryId: getCategoryId('water') },
-{ name: 'San Pellegrino', price: 45000, image: '/water3.png', description: 'Italian sparkling water.', categoryId: getCategoryId('water') },
-{ name: 'Aqua 1500ml', price: 18000, image: '/water4.png', description: 'Large bottled water.', categoryId: getCategoryId('water') },
-//set a
-{ name: 'Lunch A Salmon Teriyaki', price: 120000, image: '/luncha1.png', description: 'Grilled salmon with teriyaki sauce.', categoryId: getCategoryId('luncha') },
-{ name: 'Lunch A Beef Blackpepper', price: 110000, image: '/luncha2.png', description: 'Stir fried beef with blackpepper sauce.', categoryId: getCategoryId('luncha') },
-{ name: 'Lunch A Chicken Katsu', price: 95000, image: '/luncha3.png', description: 'Crispy chicken cutlet.', categoryId: getCategoryId('luncha') },
-{ name: 'Lunch A Seafood Hotplate', price: 130000, image: '/luncha4.png', description: 'Mixed seafood on sizzling plate.', categoryId: getCategoryId('luncha') },
-//set b
-{ name: 'Lunch B Grilled Prawn', price: 115000, image: '/lunchb1.png', description: 'Grilled prawn with butter sauce.', categoryId: getCategoryId('lunchb') },
-{ name: 'Lunch B Fried Fish Fillet', price: 95000, image: '/lunchb2.png', description: 'Crispy fried fish fillet.', categoryId: getCategoryId('lunchb') },
-{ name: 'Lunch B Chicken Teriyaki', price: 95000, image: '/lunchb3.png', description: 'Chicken grilled in teriyaki sauce.', categoryId: getCategoryId('lunchb') },
-{ name: 'Lunch B Vegetable Delight', price: 85000, image: '/lunchb4.png', description: 'Assorted stir fried vegetables.', categoryId: getCategoryId('lunchb') },
-//seafood set dinner
-{ name: 'Seafood Dinner Crab', price: 210000, image: '/seafooddinner1.png', description: 'Whole crab in chef’s sauce.', categoryId: getCategoryId('seafooddinner') },
-{ name: 'Seafood Dinner Prawn', price: 190000, image: '/seafooddinner2.png', description: 'Grilled prawn with sambal.', categoryId: getCategoryId('seafooddinner') },
-{ name: 'Seafood Dinner Mussel', price: 170000, image: '/seafooddinner3.png', description: 'Stir-fried mussels with chili.', categoryId: getCategoryId('seafooddinner') },
-{ name: 'Seafood Dinner Ikan Bakar', price: 180000, image: '/seafooddinner4.png', description: 'Grilled fish with sambal.', categoryId: getCategoryId('seafooddinner') },
-//lobster bbq set dinner
-{ name: 'Lobster BBQ Original', price: 350000, image: '/lobsterbbq1.png', description: 'Grilled lobster with garlic butter.', categoryId: getCategoryId('lobsterbbq') },
-{ name: 'Lobster BBQ Sweet Spicy', price: 360000, image: '/lobsterbbq2.png', description: 'Grilled lobster with sweet chili sauce.', categoryId: getCategoryId('lobsterbbq') },
-{ name: 'Lobster BBQ Honey Soy', price: 355000, image: '/lobsterbbq3.png', description: 'Grilled lobster with honey soy glaze.', categoryId: getCategoryId('lobsterbbq') },
-{ name: 'Lobster BBQ Sambal Matah', price: 360000, image: '/lobsterbbq4.png', description: 'Balinese style sambal matah topping.', categoryId: getCategoryId('lobsterbbq') },
-//hotpot dinner
-{ name: 'Hot Pot Seafood Combo', price: 250000, image: '/hotpot1.png', description: 'Seafood hot pot with assorted vegetables.', categoryId: getCategoryId('hotpot') },
-{ name: 'Hot Pot Beef Slice', price: 220000, image: '/hotpot2.png', description: 'Thinly sliced beef for hot pot.', categoryId: getCategoryId('hotpot') },
-{ name: 'Hot Pot Chicken', price: 180000, image: '/hotpot3.png', description: 'Tender chicken pieces for hot pot.', categoryId: getCategoryId('hotpot') },
-{ name: 'Hot Pot Vegetable Set', price: 150000, image: '/hotpot4.png', description: 'Assorted vegetables for hot pot.', categoryId: getCategoryId('hotpot') },
-//table bbq dinner
-{ name: 'BBQ Beef Rib', price: 260000, image: '/tablebbq1.png', description: 'Grilled marinated beef rib.', categoryId: getCategoryId('tablebbq') },
-{ name: 'BBQ Chicken Wing', price: 180000, image: '/tablebbq2.png', description: 'BBQ glazed chicken wings.', categoryId: getCategoryId('tablebbq') },
-{ name: 'BBQ Prawn Skewer', price: 200000, image: '/tablebbq3.png', description: 'Skewered grilled prawns.', categoryId: getCategoryId('tablebbq') },
-{ name: 'BBQ Vegetable Skewer', price: 150000, image: '/tablebbq4.png', description: 'Assorted grilled vegetables.', categoryId: getCategoryId('tablebbq') },
-    ],
-    skipDuplicates: true,
-  })
+      // MINERAL WATER
+      { name: 'Aqua 600ml', price: 12000, image: '/water1.png', description: 'Mineral water 600ml.', categoryId: getCategoryId('water') },
+      { name: 'Equil Sparkling', price: 35000, image: '/water2.png', description: 'Premium sparkling water.', categoryId: getCategoryId('water') },
+      { name: 'San Pellegrino', price: 45000, image: '/water3.png', description: 'Italian sparkling water.', categoryId: getCategoryId('water') },
+      { name: 'Aqua 1500ml', price: 18000, image: '/water4.png', description: 'Large bottled water.', categoryId: getCategoryId('water') },
+      //set a
+      { name: 'Lunch A Salmon Teriyaki', price: 120000, image: '/luncha1.png', description: 'Grilled salmon with teriyaki sauce.', categoryId: getCategoryId('luncha') },
+      { name: 'Lunch A Beef Blackpepper', price: 110000, image: '/luncha2.png', description: 'Stir fried beef with blackpepper sauce.', categoryId: getCategoryId('luncha') },
+      { name: 'Lunch A Chicken Katsu', price: 95000, image: '/luncha3.png', description: 'Crispy chicken cutlet.', categoryId: getCategoryId('luncha') },
+      { name: 'Lunch A Seafood Hotplate', price: 130000, image: '/luncha4.png', description: 'Mixed seafood on sizzling plate.', categoryId: getCategoryId('luncha') },
+      //set b
+      { name: 'Lunch B Grilled Prawn', price: 115000, image: '/lunchb1.png', description: 'Grilled prawn with butter sauce.', categoryId: getCategoryId('lunchb') },
+      { name: 'Lunch B Fried Fish Fillet', price: 95000, image: '/lunchb2.png', description: 'Crispy fried fish fillet.', categoryId: getCategoryId('lunchb') },
+      { name: 'Lunch B Chicken Teriyaki', price: 95000, image: '/lunchb3.png', description: 'Chicken grilled in teriyaki sauce.', categoryId: getCategoryId('lunchb') },
+      { name: 'Lunch B Vegetable Delight', price: 85000, image: '/lunchb4.png', description: 'Assorted stir fried vegetables.', categoryId: getCategoryId('lunchb') },
+      //seafood set dinner
+      { name: 'Seafood Dinner Crab', price: 210000, image: '/seafooddinner1.png', description: 'Whole crab in chef’s sauce.', categoryId: getCategoryId('seafooddinner') },
+      { name: 'Seafood Dinner Prawn', price: 190000, image: '/seafooddinner2.png', description: 'Grilled prawn with sambal.', categoryId: getCategoryId('seafooddinner') },
+      { name: 'Seafood Dinner Mussel', price: 170000, image: '/seafooddinner3.png', description: 'Stir-fried mussels with chili.', categoryId: getCategoryId('seafooddinner') },
+      { name: 'Seafood Dinner Ikan Bakar', price: 180000, image: '/seafooddinner4.png', description: 'Grilled fish with sambal.', categoryId: getCategoryId('seafooddinner') },
+      //lobster bbq set dinner
+      { name: 'Lobster BBQ Original', price: 350000, image: '/lobsterbbq1.png', description: 'Grilled lobster with garlic butter.', categoryId: getCategoryId('lobsterbbq') },
+      { name: 'Lobster BBQ Sweet Spicy', price: 360000, image: '/lobsterbbq2.png', description: 'Grilled lobster with sweet chili sauce.', categoryId: getCategoryId('lobsterbbq') },
+      { name: 'Lobster BBQ Honey Soy', price: 355000, image: '/lobsterbbq3.png', description: 'Grilled lobster with honey soy glaze.', categoryId: getCategoryId('lobsterbbq') },
+      { name: 'Lobster BBQ Sambal Matah', price: 360000, image: '/lobsterbbq4.png', description: 'Balinese style sambal matah topping.', categoryId: getCategoryId('lobsterbbq') },
+      //hotpot dinner
+      { name: 'Hot Pot Seafood Combo', price: 250000, image: '/hotpot1.png', description: 'Seafood hot pot with assorted vegetables.', categoryId: getCategoryId('hotpot') },
+      { name: 'Hot Pot Beef Slice', price: 220000, image: '/hotpot2.png', description: 'Thinly sliced beef for hot pot.', categoryId: getCategoryId('hotpot') },
+      { name: 'Hot Pot Chicken', price: 180000, image: '/hotpot3.png', description: 'Tender chicken pieces for hot pot.', categoryId: getCategoryId('hotpot') },
+      { name: 'Hot Pot Vegetable Set', price: 150000, image: '/hotpot4.png', description: 'Assorted vegetables for hot pot.', categoryId: getCategoryId('hotpot') },
+      //table bbq dinner
+      { name: 'BBQ Beef Rib', price: 260000, image: '/tablebbq1.png', description: 'Grilled marinated beef rib.', categoryId: getCategoryId('tablebbq') },
+      { name: 'BBQ Chicken Wing', price: 180000, image: '/tablebbq2.png', description: 'BBQ glazed chicken wings.', categoryId: getCategoryId('tablebbq') },
+      { name: 'BBQ Prawn Skewer', price: 200000, image: '/tablebbq3.png', description: 'Skewered grilled prawns.', categoryId: getCategoryId('tablebbq') },
+      { name: 'BBQ Vegetable Skewer', price: 150000, image: '/tablebbq4.png', description: 'Assorted grilled vegetables.', categoryId: getCategoryId('tablebbq') },
+          ],
+          skipDuplicates: true,
+        })
 
-  console.log('✅ Semua data + deskripsi berhasil di-seed ke database!')
-}
+        console.log('✅ Semua data + deskripsi berhasil di-seed ke database!')
+      }
 
-main()
-  .catch((e) => {
-    console.error(e)
-    process.exit(1)
-  })
-  .finally(async () => {
-    await prisma.$disconnect()
+      main()
+        .catch((e) => {
+          console.error(e)
+          process.exit(1)
+        })
+        .finally(async () => {
+          await prisma.$disconnect()
   })

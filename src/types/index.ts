@@ -13,5 +13,6 @@ export interface MenuItem {
   category: Category
   quantity: number
   note?: string
+   categoryId: number;
   description: string;
 }
