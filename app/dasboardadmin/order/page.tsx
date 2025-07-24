@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Trash2, Printer, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-
+import { generateKikiRestaurantReceipt } from '../../utils/receipt-generator';
 export default function OrderPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -13,7 +13,10 @@ export default function OrderPage() {
   const router = useRouter();
   const [showConfirm, setShowConfirm] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<number | null>(null);
-
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [printData, setPrintData] = useState<any>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [receiptText, setReceiptText] = useState('');
   const fetchOrders = async () => {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -82,6 +85,66 @@ export default function OrderPage() {
     router.push('/kasirlogin');
   };
 
+  const handlePrintPreview = async (orderId: number) => {
+    try {
+      const { data: orderData, error } = await supabase
+        .from('Order')
+        .select(`
+        *,
+        orderItems:OrderItem(*, menuItem:MenuItem(name, price))
+      `)
+        .eq('id', orderId)
+        .single();
+
+      if (error || !orderData) {
+        console.error('Error fetching order:', error);
+        alert('Gagal mengambil data order');
+        return;
+      }
+
+      setPrintData(orderData);
+      setReceiptText(generateKikiRestaurantReceipt(orderData));
+      setShowPrintPreview(true);
+    } catch (error) {
+      console.error('Preview error:', error);
+      alert('Gagal memuat preview struk');
+    }
+  };
+
+const handleConfirmPrint = async () => {
+  setIsPrinting(true);
+  try {
+    const response = await fetch('/api/print', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        receiptText,
+        target: 'both', // atau 'kitchen'/'restaurant'
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Print failed with status ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.message || 'Print command failed');
+    }
+
+    alert('Struk berhasil dikirim ke printer!');
+    setShowPrintPreview(false);
+  } catch (error) {
+    console.error('Print error:', error);
+    alert(`Gagal mencetak: ${error instanceof Error ? error.message : 'Terjadi kesalahan'}`);
+  } finally {
+    setIsPrinting(false);
+  }
+};
+
   useEffect(() => {
     const checkSessionAndFetch = async () => {
       const { data } = await supabase.auth.getSession();
@@ -95,24 +158,29 @@ export default function OrderPage() {
     checkSessionAndFetch();
   }, []);
 
-  useEffect(() => {
-    if (!loading) {
-      const channel = supabase
-        .channel('order-realtime')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'Order',
-        }, () => {
-          fetchOrders();
-        })
-        .subscribe();
+useEffect(() => {
+  if (!loading) {
+    const channel = supabase
+      .channel('order-realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'Order',
+        filter: 'isarchived=eq.false'
+      }, () => fetchOrders())
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'Order',
+        filter: 'isarchived=eq.true'
+      }, () => fetchOrders())
+      .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [loading]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }
+}, [loading]);
 
   if (loading) return <p className="text-center mt-10 text-blue-900">Memuat...</p>;
 
@@ -156,7 +224,10 @@ export default function OrderPage() {
                 <td className="py-2">{order.status}</td>
                 <td className="py-2">{order.paymentMethod}</td>
                 <td className="py-2 space-x-2">
-                  <button className="bg-blue-500 hover:bg-blue-700 text-white px-2 py-1 rounded inline-flex items-center">
+                  <button
+                    onClick={() => handlePrintPreview(order.id)}
+                    className="bg-blue-500 hover:bg-blue-700 text-white px-2 py-1 rounded inline-flex items-center"
+                  >
                     <Printer size={16} className="mr-1" /> PRINT
                   </button>
                   <button
@@ -178,7 +249,49 @@ export default function OrderPage() {
           <p className="text-center text-blue-800 py-6">Belum ada order.</p>
         )}
       </div>
+{showPrintPreview && printData && (
+  <div className="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-auto">
+      <div className="p-6">
+        <h3 className="text-xl font-bold text-blue-900 mb-4">Preview Struk</h3>
 
+        {/* Preview Struk */}
+        <div className="font-mono text-sm bg-gray-50 p-4 rounded mb-4">
+          {receiptText.split('\n').map((line, i) => (
+            <div key={i} className={line.includes('KIKI RESTAURANT') ? 'font-bold text-center' : ''}>
+              {line.replace(/\x1B\[[0-9;]*[mGKH]/g, '')}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setShowPrintPreview(false)}
+            className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded"
+          >
+            Batal
+          </button>
+          {/* Tombol cetak dengan loading state */}
+          <button
+            onClick={handleConfirmPrint}
+            disabled={isPrinting}
+            className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded inline-flex items-center ${
+              isPrinting ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            {isPrinting ? (
+              'Mencetak...'
+            ) : (
+              <>
+                <Printer size={16} className="mr-2" /> Cetak Struk
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       {/* Modal Konfirmasi */}
       {showConfirm && (
         <div className="fixed inset-0 bg-[rgba(0,0,0,0.1)] flex items-center justify-center z-50">

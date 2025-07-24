@@ -23,7 +23,7 @@ model MenuItem {
   description String
   categoryId  Int
   stock       Int         @default(0)
-  category    Category    @relation(fields: [categoryId], references: [id])
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   orderItems  OrderItem[]
 }
 
@@ -37,6 +37,7 @@ model Order {
   totalPrice    Int
   status        OrderStatus
   createdAt     DateTime      @default(now())
+  isarchived    Boolean?      @default(false)
   orderItems    OrderItem[]
 }
 
