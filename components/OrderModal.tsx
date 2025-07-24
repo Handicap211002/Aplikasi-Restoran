@@ -33,7 +33,7 @@ export const OrderModal: FC<OrderModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-xl w-[90%] max-w-md shadow-xl space-y-6 relative border border-blue-300">
-        
+
         {/* Close button */}
         <button onClick={onClose} className="absolute right-4 top-4 text-red-600 text-2xl">
           <FaTimes />
@@ -76,10 +76,9 @@ export const OrderModal: FC<OrderModalProps> = ({
               key={type}
               onClick={() => setOrderData((prev) => ({ ...prev, orderType: type as any }))}
               className={`px-4 py-2 rounded-full border border-blue-900 text-xs sm:text-xs text-[11px] font-semibold 
-                ${
-                  orderData.orderType === type
-                    ? 'bg-blue-800 text-white'
-                    : 'text-blue-900 hover:bg-blue-100'
+                ${orderData.orderType === type
+                  ? 'bg-blue-800 text-white'
+                  : 'text-blue-900 hover:bg-blue-100'
                 } 
                 sm:px-4 px-2 sm:py-2 py-1
               `}

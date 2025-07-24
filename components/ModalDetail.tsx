@@ -38,12 +38,19 @@ export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
         <h3 className="text-2xl font-bold text-center text-blue-900 mb-3">{item.name}</h3>
 
         <div className="w-full h-48 relative mb-4 rounded-lg overflow-hidden">
-          <Image
-            src={item.image}
-            alt={item.name}
-            fill
-            className="object-cover"
-          />
+          {item.image ? (
+            <Image
+              src={item.image}
+              alt={item.name}
+              fill
+              className="object-cover rounded-[10px]"
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            />
+          ) : (
+            <div className="bg-gray-200 w-full h-full flex items-center justify-center rounded-[10px] text-gray-500 text-xs">
+              No image
+            </div>
+          )}
         </div>
 
         <p className="text-sm text-center text-gray-700 mb-1">{item.description}</p>

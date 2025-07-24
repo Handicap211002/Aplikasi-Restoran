@@ -129,7 +129,7 @@ export const OrderPanel: FC<OrderPanelProps> = ({
               </div>
               <button
                 disabled={orderItems.length === 0}
-                onClick={() => onOrder()} 
+                onClick={() => onOrder()}
                 className="w-full bg-white text-sky-700 font-bold py-2 rounded-xl transition hover:bg-gray-100 disabled:opacity-50"
               >
                 Order

@@ -150,7 +150,7 @@ export default function MenuPage() {
     }
 
     const payload = {
-      name: editingItem ? form.name.trim() : `${form.name.trim()} ${Date.now()}`,
+      name: form.name.trim(),
       price: parseInt(form.price),
       image: imageUrl || '',
       description: form.description.trim(),
@@ -189,7 +189,8 @@ export default function MenuPage() {
   };
 
   return (
-    <div className="pt-24 min-h-screen bg-cover bg-center p-4" style={{ backgroundImage: "url('/bg.png')" }}>
+    <div className="relative pt-24 min-h-screen bg-cover bg-center p-4" style={{ backgroundImage: "url('/bg.png')" }}>
+    <div className="absolute inset-0 bg-white/70 backdrop-blur-sm -z-10"></div>
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white px-4 py-2 shadow-md">
         <Image src="/logo.png" alt="logo" width={90} height={50} />
         <div className="flex gap-8 text-blue-900 font-bold text-xl">
@@ -251,7 +252,7 @@ export default function MenuPage() {
       ))}
 
       {showModal && (
-        <div className="fixed inset-0 bg-[rgba(0,0,0,0.1)] flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-md space-y-4">
             <h2 className="text-center text-xl font-bold text-blue-900">EDIT MENU</h2>
             <input type="text" placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full border p-2 rounded" />
@@ -277,7 +278,7 @@ export default function MenuPage() {
       )}
 
       {showConfirm && (
-        <div className="fixed inset-0 bg-[rgba(0,0,0,0.1)] flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow text-center space-y-4">
             <p className="text-lg font-medium">Yakin ingin menghapus?</p>
             <div className="flex justify-center gap-4">
