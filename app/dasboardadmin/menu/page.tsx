@@ -190,7 +190,7 @@ export default function MenuPage() {
 
   return (
     <div className="relative pt-24 min-h-screen bg-cover bg-center p-4" style={{ backgroundImage: "url('/bg.png')" }}>
-    <div className="absolute inset-0 bg-white/70 backdrop-blur-sm -z-10"></div>
+      <div className="absolute inset-0 bg-white -z-10"></div>
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white px-4 py-2 shadow-md">
         <Image src="/logo.png" alt="logo" width={90} height={50} />
         <div className="flex gap-8 text-blue-900 font-bold text-xl">
@@ -213,10 +213,10 @@ export default function MenuPage() {
           <h2 className="text-center font-bold text-xl text-blue-900 mb-4">{label}</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm text-center">
-              <thead className="bg-blue-100">
-                <tr><th>ID</th><th>Gambar</th><th>Nama</th><th>Harga</th><th>Stok</th><th>Deskripsi</th><th>Status</th></tr>
+              <thead className="bg-blue-100 text-blue-900 text-sm">
+                <tr><th>ID</th><th>Gambar</th><th>Nama</th><th>Harga</th><th>Stok</th><th>Deskripsi</th><th>ACTION</th></tr>
               </thead>
-              <tbody className="divide-y divide-blue-200">
+              <tbody className="divide-y divide-blue-200 text-blue-900">
                 {items.map(item => (
                   <tr key={item.id} className="border-t">
                     <td className="py-4">{item.id}</td>

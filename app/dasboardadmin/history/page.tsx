@@ -90,7 +90,7 @@ export default function HistoryPage() {
         <select
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
-          className="p-2 border border-blue-900 text-blue-900 rounded"
+          className="p-2 border border-blue-900 text-black rounded"
         >
           <option value="2025-07">JULI 2025</option>
           <option value="2025-06">JUNI 2025</option>
@@ -98,11 +98,11 @@ export default function HistoryPage() {
           {/* Tambah lagi jika perlu */}
         </select>
 
-        <button className="flex items-center gap-1 border border-blue-900 text-blue-900 px-4 py-1 rounded hover:bg-blue-900 hover:text-white transition">
+        <button className="flex items-center gap-1 border border-blue-900 text-black px-4 py-1 rounded hover:bg-blue-900 hover:text-white transition">
           <Eye size={16} /> VIEW ALL ORDER
         </button>
 
-        <button className="flex items-center gap-1 border border-blue-900 text-blue-900 px-4 py-1 rounded hover:bg-blue-900 hover:text-white transition">
+        <button className="flex items-center gap-1 border border-blue-900 text-black px-4 py-1 rounded hover:bg-blue-900 hover:text-white transition">
           <Printer size={16} /> PRINT ALL ORDER
         </button>
       </div>
