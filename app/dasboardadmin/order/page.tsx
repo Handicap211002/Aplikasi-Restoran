@@ -118,7 +118,7 @@ export default function OrderPage() {
     const encoded = encodeURIComponent(receiptText);
   
     // Arahkan browser tablet ke aplikasi RawBT
-    window.location.href = `rawbt://print?text=${encoded}`;
+    window.location.href = `rawbt:${encoded}`;
   
     // Tutup modal preview
     setShowPrintPreview(false);
