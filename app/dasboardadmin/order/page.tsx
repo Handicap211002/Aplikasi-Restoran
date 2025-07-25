@@ -112,38 +112,17 @@ export default function OrderPage() {
   };
 
   const handleConfirmPrint = async () => {
-    setIsPrinting(true);
-    try {
-      const response = await fetch('/api/print', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          receiptText,
-          target: 'both', // atau 'kitchen'/'restaurant'
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Print failed with status ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.message || 'Print command failed');
-      }
-
-      alert('Struk berhasil dikirim ke printer!');
-      setShowPrintPreview(false);
-    } catch (error) {
-      console.error('Print error:', error);
-      alert(`Gagal mencetak: ${error instanceof Error ? error.message : 'Terjadi kesalahan'}`);
-    } finally {
-      setIsPrinting(false);
-    }
-  };
+    if (!receiptText) return alert('Tidak ada data struk');
+  
+    // Encode teks struk agar bisa dibaca oleh RawBT
+    const encoded = encodeURIComponent(receiptText);
+  
+    // Arahkan browser tablet ke aplikasi RawBT
+    window.location.href = `rawbt://print?text=${encoded}`;
+  
+    // Tutup modal preview
+    setShowPrintPreview(false);
+  };  
 
   useEffect(() => {
     const checkSessionAndFetch = async () => {
