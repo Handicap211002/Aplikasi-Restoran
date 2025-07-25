@@ -38,9 +38,7 @@ export function generateKikiRestaurantReceipt(
 
   let result = '';
 
-  // Tambahkan logo image ke bagian atas (jika printer mendukung base64)
-  result += `<img>${LOGO_BASE64}</img>\n`;
-
+  result += `[img]${LOGO_BASE64}[/img]\n`;
   // Header informasi restoran
   result += centerText('KIKI RESTAURANT') + '\n';
   result += centerText('Telp: (0778) 123456') + '\n';
