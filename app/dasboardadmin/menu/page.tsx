@@ -221,7 +221,19 @@ export default function MenuPage() {
                   <tr key={item.id} className="border-t">
                     <td className="py-4">{item.id}</td>
                     <td className="px-2 py-1">
-                      <Image src={item.image} alt={item.name} width={70} height={50} className="rounded object-cover mx-auto" />
+                      {item.image ? (
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          width={70}
+                          height={50}
+                          className="rounded object-cover mx-auto"
+                        />
+                      ) : (
+                        <div className="w-[70px] h-[50px] bg-gray-200 flex items-center justify-center text-xs text-gray-500 rounded mx-auto">
+                          No Image
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-4">{item.name}</td>
                     <td className="px-4 py-4">Rp. {item.price.toLocaleString()}</td>
