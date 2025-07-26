@@ -10,7 +10,7 @@ interface NavbarProps {
 
 export const Navbar: FC<NavbarProps> = ({ onToggleSidebar, onToggleOrderPanel, onSearch }) => {
   return (
-    <header className="w-full flex items-center justify-between bg-white px-6 py-1 shadow-md z-50 sticky top-0">
+    <header className="fixed top-0 left-0 right-0 flex items-center justify-between bg-white px-6 py-1 shadow-md z-50">
       {/* Kiri: Hamburger + Logo */}
       <div className="flex items-center gap-4">
         <button

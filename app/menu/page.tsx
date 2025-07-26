@@ -362,7 +362,7 @@ export default function MainMenuPage() {
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto p-6 pt-[100px] space-y-10">
+        <main className="flex-1 min-h-screen pt-24 pb-10 px-4 overflow-x-hidden">
           {searchQuery.trim() !== '' ? (
             <>
               <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Search Results</h2>

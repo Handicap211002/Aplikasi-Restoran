@@ -37,7 +37,7 @@ export const OrderPanel: FC<OrderPanelProps> = ({
 
       <aside
         className={`w-80 md:w-96 bg-white shadow-2xl h-full transition-transform duration-300
-          fixed top-0 right-0 z-40 overflow-y-auto pt-16
+          fixed top-[74px] right-0 z-40 h-[calc(100vh-64px)] overflow-y-auto pt-4
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
           md:relative md:translate-x-0 md:pt-0`}
       >

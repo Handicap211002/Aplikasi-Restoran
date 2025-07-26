@@ -58,27 +58,27 @@ export const Sidebar: FC<SidebarProps> = ({ isOpen, onSelectCategory, onClose, c
           onClick={onClose}
         />
       )}
-
-      <aside
-        id="sidebar"
-        className={`bg-white md:bg-transparent w-64 p-4 pt-[64px] transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          fixed inset-y-0 left-0 z-40 h-full overflow-y-auto md:relative md:translate-x-0 flex flex-col`}
-      >
+        <aside
+          id="sidebar"
+          className={`bg-white md:bg-transparent w-64 p-4 pt-[34px] transition-transform duration-300 ease-in-out
+            ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+            fixed top-[64px] bottom-0 left-0 z-40 h-[calc(100vh-64px)] overflow-y-auto md:relative md:translate-x-0 flex flex-col`}
+        >
         <div className="flex-grow">
           <h1 className="text-2xl font-bold mb-6 text-gray-800">FOOD</h1>
           <ul className="space-y-3 text-[15px] font-medium text-black-500">
             {Object.entries(foodCategories).map(([name, id]) => (
               <li
-                key={id}
-                onClick={() => {
-                  onSelectCategory(id);
-                }}
-                className={`cursor-pointer rounded px-2 py-1 hover:text-blue-500 ${currentCategory === id ? 'bg-white/70 text-blue-600 font-semibold' : ''
-                  }`}
-              >
-                {name}
-              </li>
+              key={id}
+              onClick={() => onSelectCategory(id)}
+              className={`cursor-pointer rounded px-2 py-1 hover:text-blue-500 ${
+                currentCategory === id
+                  ? 'bg-white/70 text-blue-600 font-semibold'
+                  : 'text-black'
+              }`}
+            >
+              {name}
+            </li>
             ))}
           </ul>
 
@@ -86,15 +86,16 @@ export const Sidebar: FC<SidebarProps> = ({ isOpen, onSelectCategory, onClose, c
           <ul className="space-y-3 text-[15px] font-medium text-black-500">
             {Object.entries(beverageCategories).map(([name, id]) => (
               <li
-                key={id}
-                onClick={() => {
-                  onSelectCategory(id);
-                }}
-                className={`cursor-pointer rounded px-2 py-1 hover:text-blue-500 ${currentCategory === id ? 'bg-white/70 text-blue-600 font-semibold' : ''
-                  }`}
-              >
-                {name}
-              </li>
+              key={id}
+              onClick={() => onSelectCategory(id)}
+              className={`cursor-pointer rounded px-2 py-1 hover:text-blue-500 ${
+                currentCategory === id
+                  ? 'bg-white/70 text-blue-600 font-semibold'
+                  : 'text-black'
+              }`}
+            >
+              {name}
+            </li>
             ))}
           </ul>
         </div>
