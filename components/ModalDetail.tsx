@@ -60,14 +60,14 @@ export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
         </p>
 
         <div className="relative mb-4">
-          <span className="absolute left-3 top-2.5 text-gray-400">📝</span>
+          <span className="absolute left-3 top-2.5 text-grey-500">📝</span>
           <input
             ref={inputRef}
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Catatan"
-            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm bg-[#F2F2F2] placeholder-gray-500"
+            className="w-full pl-9 pr-3 py-2 border text-black-500 rounded-lg text-sm bg-[#F2F2F2] placeholder-gray-500"
           />
         </div>
 

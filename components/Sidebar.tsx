@@ -67,7 +67,7 @@ export const Sidebar: FC<SidebarProps> = ({ isOpen, onSelectCategory, onClose, c
       >
         <div className="flex-grow">
           <h1 className="text-2xl font-bold mb-6 text-gray-800">FOOD</h1>
-          <ul className="space-y-3 text-[15px] font-medium">
+          <ul className="space-y-3 text-[15px] font-medium text-black-500">
             {Object.entries(foodCategories).map(([name, id]) => (
               <li
                 key={id}
@@ -83,7 +83,7 @@ export const Sidebar: FC<SidebarProps> = ({ isOpen, onSelectCategory, onClose, c
           </ul>
 
           <h2 className="text-2xl font-bold mt-6 mb-4 text-gray-800">BEVERAGES</h2>
-          <ul className="space-y-3 text-[15px] font-medium">
+          <ul className="space-y-3 text-[15px] font-medium text-black-500">
             {Object.entries(beverageCategories).map(([name, id]) => (
               <li
                 key={id}

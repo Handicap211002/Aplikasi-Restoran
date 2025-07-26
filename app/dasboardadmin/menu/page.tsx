@@ -267,11 +267,11 @@ export default function MenuPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-md space-y-4">
             <h2 className="text-center text-xl font-bold text-blue-900">EDIT MENU</h2>
-            <input type="text" placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full border p-2 rounded" />
-            <input type="number" placeholder="Price" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} className="w-full border p-2 rounded" />
-            <input type="file" accept="image/*" onChange={e => setForm({ ...form, file: e.target.files?.[0] || null })} className="w-full border p-2 rounded" />
-            <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="w-full border p-2 rounded" />
-            <input type="number" placeholder="Stock" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} className="w-full border p-2 rounded" />
+            <input type="text" placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full border p-2 rounded text-black-500" />
+            <input type="number" placeholder="Price" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} className="w-full border p-2 rounded text-black-500" />
+            <input type="file" accept="image/*" onChange={e => setForm({ ...form, file: e.target.files?.[0] || null })} className="w-full border p-2 rounded text-black-500" />
+            <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="w-full border p-2 rounded text-black-500" />
+            <input type="number" placeholder="Stock" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} className="w-full border p-2 rounded text-black-500" />
             <div className="flex justify-between mt-4">
               <button onClick={() => setShowModal(false)} className="bg-red-500 text-white px-4 py-2 rounded">CANCEL</button>
               <button

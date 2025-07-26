@@ -95,7 +95,7 @@ export const SuccessModal: FC<SuccessModalProps> = ({
             </div>
 
             <p className="text-sm text-gray-700 leading-5 mb-4">
-              Please wait for your order for about 15-20 minutes<br />
+              Please wait for your order<br />
               <span className="font-semibold">Thank you & enjoy.</span>
             </p>
 

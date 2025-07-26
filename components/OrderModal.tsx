@@ -51,9 +51,9 @@ export const OrderModal: FC<OrderModalProps> = ({
             value={orderData.roomNumber}
             onChange={(e) => setOrderData((prev) => ({ ...prev, roomNumber: e.target.value.replace(/\D/g, '') }))}
             placeholder="Room Number"
-            className="w-full border border-gray-300 rounded-lg px-10 py-3 text-sm"
+            className="w-full border border-gray-300 rounded-lg px-10 py-3 text-sm text-black-500"
           />
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">🏨</span>
+          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black-500 text-lg">🏨</span>
         </div>
 
         {/* Customer Name */}
@@ -63,9 +63,9 @@ export const OrderModal: FC<OrderModalProps> = ({
             value={orderData.customerName}
             onChange={(e) => setOrderData((prev) => ({ ...prev, customerName: e.target.value }))}
             placeholder="Name"
-            className="w-full border border-gray-300 rounded-lg px-10 py-3 text-sm"
+            className="w-full border border-gray-300 rounded-lg px-10 py-3 text-sm text-black-500"
           />
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">👤</span>
+          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black-500 text-lg">👤</span>
         </div>
 
         {/* Order Type */}

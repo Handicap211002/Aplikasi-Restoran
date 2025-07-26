@@ -20,7 +20,7 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
     setTimeout(() => {
       onSelect(method)
       setIsLoading(false)
-    }, 1000) // Delay untuk simulasi proses
+    }, 2000) // Delay untuk simulasi proses
   }
 
   const Spinner = () => (

@@ -35,7 +35,7 @@ export function generateKikiRestaurantReceipt(
   };
 
   let result = '';
-  result += centerText('KIKI RESTAURANT') + '\n';
+  result += centerText('KIKI BEACH RESORT') + '\n';
   result += centerText('Telp: (0778) 123456') + '\n';
   result += centerText('Jl. Pantai Marina, Batam - 29467') + '\n';
   result += `${divider}\n`;
