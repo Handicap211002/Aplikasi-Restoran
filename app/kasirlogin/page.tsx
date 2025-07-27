@@ -3,13 +3,17 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react'; // (pastikan sudah install lucide-react)
+import { ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [newFullName, setNewFullName] = useState('');
+  const [userIdToUpdate, setUserIdToUpdate] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -28,11 +32,33 @@ export default function LoginPage() {
 
       if (signInError || !data.session) throw new Error('Email atau password salah');
 
-      router.push('/dasboardadmin/order');
+      const user = data.user;
+
+      // Cek apakah sudah punya nama kasir
+      if (!user.user_metadata?.full_name) {
+        setUserIdToUpdate(user.id);
+        setShowNameModal(true); // tampilkan modal input nama
+      } else {
+        router.push('/dasboardadmin/order');
+      }
     } catch (err: any) {
       setError(err.message || 'Terjadi kesalahan saat login');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (!newFullName.trim()) return;
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      data: { full_name: newFullName.trim() },
+    });
+
+    if (updateError) {
+      alert('Gagal menyimpan nama kasir');
+    } else {
+      router.push('/dasboardadmin/order');
     }
   };
 
@@ -82,6 +108,28 @@ export default function LoginPage() {
           </button>
         </form>
       </div>
+
+      {/* Modal input nama kasir */}
+      {showNameModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-sm">
+            <h2 className="text-lg font-semibold mb-4 text-blue-900">Masukkan Nama Kasir</h2>
+            <input
+              type="text"
+              value={newFullName}
+              onChange={(e) => setNewFullName(e.target.value)}
+              placeholder="Contoh: Kasir Ayu"
+              className="w-full mb-4 p-2 border border-blue-900 text-blue-900 rounded"
+            />
+            <button
+              onClick={handleSaveName}
+              className="w-full bg-blue-900 text-white py-2 rounded hover:bg-blue-800 transition duration-200"
+            >
+              Simpan & Masuk
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

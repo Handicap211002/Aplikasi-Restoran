@@ -87,30 +87,51 @@ export default function OrderPage() {
 
   const handlePrintPreview = async (orderId: number) => {
     try {
+      // Ambil data order + relasinya
       const { data: orderData, error } = await supabase
         .from('Order')
         .select(`
-        *,
-        orderItems:OrderItem(*, menuItem:MenuItem(name, price))
-      `)
+          *,
+          orderItems:OrderItem(*, menuItem:MenuItem(name, price))
+        `)
         .eq('id', orderId)
         .single();
-
+  
       if (error || !orderData) {
         console.error('Error fetching order:', error);
         alert('Gagal mengambil data order');
         return;
       }
 
-      setPrintData(orderData);
-      setReceiptText(generateKikiRestaurantReceipt(orderData));
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+  
+      if (userError) {
+        console.error('Error fetching user:', userError);
+      }
+  
+      const cashierName =
+        user?.user_metadata?.full_name ||
+        user?.user_metadata?.name ||
+        user?.email ||
+        'Kasir Tidak Dikenal';
+
+      const completeOrderData = {
+        ...orderData,
+        cashierName,
+      };
+
+      setPrintData({ ...orderData, cashierName });
+      setReceiptText(generateKikiRestaurantReceipt(orderData, cashierName));      
       setShowPrintPreview(true);
     } catch (error) {
       console.error('Preview error:', error);
       alert('Gagal memuat preview struk');
     }
   };
-
+  
   const handleConfirmPrint = async () => {
     if (!receiptText) return alert('Tidak ada data struk');
   

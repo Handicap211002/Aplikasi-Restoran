@@ -20,7 +20,8 @@ export function generateKikiRestaurantReceipt(
         price: number;
       };
     })[];
-  }
+  },
+  cashierName: string
 ): string {
   const padRight = (text: string, width: number) => text.padEnd(width, ' ');
   const padLeft = (text: string, width: number) => text.padStart(width, ' ');
@@ -35,15 +36,17 @@ export function generateKikiRestaurantReceipt(
   };
 
   let result = '';
-  result += centerText('KIKI BEACH RESORT') + '\n';
-  result += centerText('Telp: (0778) 123456') + '\n';
-  result += centerText('Jl. Pantai Marina, Batam - 29467') + '\n';
+  result += centerText('KIKI BEACH ISLAND RESORT') + '\n';
+  result += centerText('Telp: +62 822-8923-0001') + '\n';
+  result += centerText('Pasir Gelam, Karas, Pulau Galang, Kota Batam, Kepulauan Riau 29486 Batulicin') + '\n';
   result += `${divider}\n`;
   result += `Tanggal   : ${formatToWIB(order.createdAt)}\n`; // 🕒 Waktu WIB
   result += `No. Order : #${String(order.id).padStart(5, '0')}\n`;
   result += `Tipe Pesan: ${order.orderType.replace(/_/g, ' ')}\n`;
   if (order.roomNumber) result += `Room No.  : ${order.roomNumber}\n`;
   result += `Nama      : ${order.customerName}\n`;
+  result += `Kasir     : ${cashierName}\n`;
+
 
   result += `${subDivider}\n`;
   result += `Qty  Menu${' '.repeat(30)}Total\n`;
