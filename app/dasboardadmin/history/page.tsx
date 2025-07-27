@@ -33,6 +33,8 @@ export default function HistoryPage() {
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [viewAll, setViewAll] = useState(false);
+  const [cashierName, setCashierName] = useState<string>('');
+
 
   const fetchOrders = async () => {
     let query = supabase
@@ -69,7 +71,7 @@ export default function HistoryPage() {
 
   const handlePrintPreview = (order: Order) => {
     setPrintData(order);
-    setReceiptText(generateKikiRestaurantReceipt(order));
+    setReceiptText(generateKikiRestaurantReceipt(order, cashierName));
     setShowPrintPreview(true);
   };
 
@@ -82,7 +84,7 @@ export default function HistoryPage() {
 
   const handlePrintAll = () => {
     if (!orders.length) return alert('Tidak ada data order');
-    const combinedText = orders.map(generateKikiRestaurantReceipt).join('\n\n\n');
+    const combinedText = orders.map(order => generateKikiRestaurantReceipt(order, cashierName)).join('\n\n\n');
     setReceiptText(combinedText);
     setShowPrintPreview(true);
   };
@@ -97,9 +99,12 @@ export default function HistoryPage() {
       if (!data.session) {
         router.push('/kasirlogin');
       } else {
+        const user = data.session.user;
+        const displayName = user.user_metadata?.displayName || user.email || 'Kasir';
+        setCashierName(displayName);
         setLoading(false);
       }
-    };
+    };     
     checkSession();
   }, [router]);
 
