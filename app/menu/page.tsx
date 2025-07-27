@@ -182,7 +182,7 @@ export default function MainMenuPage() {
 
       const order = await res.json()
 
-      // Tampilkan SuccessModal
+      setOrderItems([])
       setShowPaymentModal(false)
       setShowSuccessModal(true)
     } catch (err) {

@@ -1,5 +1,5 @@
 'use client'
-import { FC, useState } from 'react'
+import { FC, useState, useEffect } from 'react'
 
 interface PaymentMethodModalProps {
   isOpen: boolean
@@ -11,6 +11,13 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
   const [selectedMethod, setSelectedMethod] = useState<'CASH' | 'TRANSFER' | 'ROOM_CHARGE' | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedMethod(null)
+      setIsLoading(false)
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   const handleSelect = async (method: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE') => {
@@ -18,9 +25,10 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
     setIsLoading(true)
 
     setTimeout(() => {
-      onSelect(method)
       setIsLoading(false)
-    }, 2000) // Delay untuk simulasi proses
+      onSelect(method)   // Trigger success modal dari parent
+      onClose()          // Tutup modal ini
+    }, 2000)
   }
 
   const Spinner = () => (
@@ -48,9 +56,14 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-      <div className="bg-white px-6 py-8 rounded-2xl w-full max-w-sm shadow-xl text-center relative space-y-5">
-
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 px-4 transition-opacity duration-300">
+      <div
+        className={`
+          bg-white px-6 py-8 rounded-2xl w-full max-w-sm shadow-xl text-center relative space-y-5 
+          transform transition-all duration-500
+          ${isOpen ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}
+        `}
+      >
         <h2 className="text-xl sm:text-2xl font-bold text-black">Select Payment Method</h2>
 
         <button
