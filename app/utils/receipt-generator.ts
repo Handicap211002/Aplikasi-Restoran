@@ -31,9 +31,11 @@ export function generateKikiRestaurantReceipt(
 
   const centerText = (text: string) => {
     const lineWidth = 48;
+    if (text.length >= lineWidth) return text; // kalau terlalu panjang, biarkan apa adanya
     const leftPadding = Math.floor((lineWidth - text.length) / 2);
     return ' '.repeat(leftPadding) + text;
   };
+
 
   let result = '';
   result += centerText('KIKI BEACH ISLAND RESORT') + '\n';
