@@ -461,7 +461,7 @@ export default function MainMenuPage() {
                                                               : waterRef
                 }
                 data-category={categoryName.toLowerCase().replace(/\s/g, '')}
-                className="scroll-mt-[100px]"
+                className="scroll-mt-[100px] mb-10"
               >
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">
                   {categoryName}
