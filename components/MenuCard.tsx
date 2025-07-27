@@ -1,5 +1,6 @@
 'use client';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 
 type Props = {
   item: {
@@ -8,7 +9,7 @@ type Props = {
     price: number;
     image: string;
     description?: string;
-    stock: number; // ✅ Tambahkan ini
+    stock: number;
   };
   onAdd: () => void;
 };
@@ -17,9 +18,20 @@ export function MenuCard({ item, onAdd }: Props) {
   const isSoldOut = item.stock === 0;
 
   return (
-    <div
-      className={`bg-white rounded-xl shadow-lg p-3 flex flex-col items-center transition relative ${isSoldOut ? 'cursor-not-allowed opacity-50' : 'hover:scale-105 cursor-pointer'
-        }`}
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: 0.8, // lebih lambat & smooth
+        ease: [0.25, 0.1, 0.25, 1], // cubic bezier klasik
+      }}
+      viewport={{ once: true, amount: 0.3 }}
+      style={{ willChange: 'opacity, transform' }}
+      className={`bg-white rounded-xl shadow-lg p-3 flex flex-col items-center transition-all duration-300 ease-in-out relative ${
+        isSoldOut
+          ? 'cursor-not-allowed opacity-50'
+          : 'hover:scale-105 cursor-pointer'
+      }`}
       onClick={() => {
         if (!isSoldOut) onAdd();
       }}
@@ -39,7 +51,7 @@ export function MenuCard({ item, onAdd }: Props) {
           </div>
         )}
         {isSoldOut && (
-          <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center rounded-[10px]">
+          <div className="absolute inset-0 bg-gray-300 bg-opacity-60 flex items-center justify-center rounded-[10px]">
             <span className="text-white font-bold text-lg">Sold Out</span>
           </div>
         )}
@@ -49,6 +61,6 @@ export function MenuCard({ item, onAdd }: Props) {
       <p className="text-center text-gray-600 text-xs mt-1">
         Rp. {item.price.toLocaleString('id-ID')}
       </p>
-    </div>
+    </motion.div>
   );
 }

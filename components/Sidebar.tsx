@@ -58,12 +58,13 @@ export const Sidebar: FC<SidebarProps> = ({ isOpen, onSelectCategory, onClose, c
           onClick={onClose}
         />
       )}
-        <aside
-          id="sidebar"
-          className={`bg-white md:bg-transparent w-64 p-4 pt-[34px] transition-transform duration-300 ease-in-out
-            ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-            fixed top-[64px] bottom-0 left-0 z-40 h-[calc(100vh-64px)] overflow-y-auto md:relative md:translate-x-0 flex flex-col`}
-        >
+<aside
+  id="sidebar"
+  className={`bg-white md:bg-transparent w-64 p-4 pt-[24px] transition-transform duration-300 ease-in-out
+    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+    fixed top-[80px] bottom-0 left-0 z-40 h-[calc(100vh-80px)] overflow-y-auto
+    md:relative md:translate-x-0 flex flex-col`}
+>
         <div className="flex-grow">
           <h1 className="text-2xl font-bold mb-6 text-gray-800">FOOD</h1>
           <ul className="space-y-3 text-[15px] font-medium text-black-500">

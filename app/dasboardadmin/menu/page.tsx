@@ -269,7 +269,7 @@ export default function MenuPage() {
             <h2 className="text-center text-xl font-bold text-blue-900">EDIT MENU</h2>
             <input type="text" placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full border p-2 rounded text-black" />
             <input type="number" placeholder="Price" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} className="w-full border p-2 rounded text-black" />
-            <input type="file" accept="image/*" onChange={e => setForm({ ...form, file: e.target.files?.[0] || null })} className="w-full border p-2 rounded text-black-500" />
+            <input type="file" accept="image/*" onChange={e => setForm({ ...form, file: e.target.files?.[0] || null })} className="w-full border p-2 rounded text-black" />
             <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="w-full border p-2 rounded text-black" />
             <input type="number" placeholder="Stock" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} className="w-full border p-2 rounded text-black" />
             <div className="flex justify-between mt-4">
