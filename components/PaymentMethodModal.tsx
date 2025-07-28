@@ -21,13 +21,17 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
   if (!isOpen) return null
 
   const handleSelect = async (method: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE') => {
+    // Jangan bisa klik lagi saat loading
+    if (isLoading) return
+
     setSelectedMethod(method)
     setIsLoading(true)
 
+    // Simulasi delay
     setTimeout(() => {
+      onSelect(method) // Tampilkan modal sukses
+      // Jangan tutup langsung. Biarkan parent yang tutup saat proses selesai.
       setIsLoading(false)
-      onSelect(method)   // Trigger success modal dari parent
-      onClose()          // Tutup modal ini
     }, 2000)
   }
 
@@ -42,7 +46,8 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
 
   const getButtonClass = (method: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE') => {
     const isSelected = selectedMethod === method
-    return `${baseClass} ${isSelected ? selectedClass : `${unselectedClass} ${hoverClass}`}`
+    const isAnyDisabled = isLoading && selectedMethod !== method
+    return `${baseClass} ${isSelected ? selectedClass : `${unselectedClass} ${!isAnyDisabled ? hoverClass : ''}`} ${isAnyDisabled ? 'opacity-50 cursor-not-allowed' : ''}`
   }
 
   const renderButtonContent = (method: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE') => {
@@ -56,7 +61,7 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 px-4 transition-opacity duration-300">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 transition-opacity duration-300">
       <div
         className={`
           bg-white px-6 py-8 rounded-2xl w-full max-w-sm shadow-xl text-center relative space-y-5 

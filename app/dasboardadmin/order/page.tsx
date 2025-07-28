@@ -96,7 +96,7 @@ export default function OrderPage() {
         `)
         .eq('id', orderId)
         .single();
-  
+
       if (error || !orderData) {
         console.error('Error fetching order:', error);
         alert('Gagal mengambil data order');
@@ -107,11 +107,11 @@ export default function OrderPage() {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser();
-  
+
       if (userError) {
         console.error('Error fetching user:', userError);
       }
-  
+
       const cashierName =
         user?.user_metadata?.full_name ||
         user?.user_metadata?.name ||
@@ -124,26 +124,26 @@ export default function OrderPage() {
       };
 
       setPrintData({ ...orderData, cashierName });
-      setReceiptText(generateKikiRestaurantReceipt(orderData, cashierName));      
+      setReceiptText(generateKikiRestaurantReceipt(orderData, cashierName));
       setShowPrintPreview(true);
     } catch (error) {
       console.error('Preview error:', error);
       alert('Gagal memuat preview struk');
     }
   };
-  
+
   const handleConfirmPrint = async () => {
     if (!receiptText) return alert('Tidak ada data struk');
-  
+
     // Encode teks struk agar bisa dibaca oleh RawBT
     const encoded = encodeURIComponent(receiptText);
-  
+
     // Arahkan browser tablet ke aplikasi RawBT
     window.location.href = `rawbt:${encoded}`;
-  
+
     // Tutup modal preview
     setShowPrintPreview(false);
-  };  
+  };
 
   useEffect(() => {
     const checkSessionAndFetch = async () => {
@@ -188,8 +188,14 @@ export default function OrderPage() {
     <div className="pt-24 min-h-screen bg-cover bg-center p-4" style={{ backgroundImage: "url('/bg.png')" }}>
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white px-4 py-2 shadow-md">
-        <Image src="/logo.png" alt="logo" width={90} height={50} />
-        <div className="flex gap-8 text-blue-900 font-bold text-xl">
+        <Image
+          src="/logo.png"
+          alt="logo"
+          width={90}
+          height={50}
+          className="hidden md:block"
+        />
+        <div className="flex gap-4 text-blue-900 font-bold text-sm sm:text-base md:text-xl">
           <a className="border-b-4 border-blue-900 pb-1">ORDER</a>
           <a href="/dasboardadmin/history" className="hover:border-b-4 hover:border-blue-900 pb-1">HISTORY</a>
           <a href="/dasboardadmin/menu" className="hover:border-b-4 hover:border-blue-900 pb-1">MENU</a>
@@ -223,22 +229,24 @@ export default function OrderPage() {
                 <td className="py-2">Rp.{order.totalPrice?.toLocaleString() ?? 0}</td>
                 <td className="py-2">{order.status}</td>
                 <td className="py-2">{order.paymentMethod}</td>
-                <td className="py-2 space-x-2">
-                  <button
-                    onClick={() => handlePrintPreview(order.id)}
-                    className="bg-blue-500 hover:bg-blue-700 text-white px-2 py-1 rounded inline-flex items-center"
-                  >
-                    <Printer size={16} className="mr-1" /> PRINT
-                  </button>
-                  <button
-                    onClick={() => {
-                      setOrderToDelete(order.id);
-                      setShowConfirm(true);
-                    }}
-                    className="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded inline-flex items-center"
-                  >
-                    <Trash2 size={16} className="mr-1" /> DELETE
-                  </button>
+                <td className="py-2">
+                  <div className="flex flex-col sm:flex-row justify-center items-center gap-2 px-2">
+                    <button
+                      onClick={() => handlePrintPreview(order.id)}
+                      className="bg-blue-500 hover:bg-blue-700 text-white px-3 py-1 rounded inline-flex items-center justify-center w-full sm:w-auto"
+                    >
+                      <Printer size={16} className="mr-1" /> PRINT
+                    </button>
+                    <button
+                      onClick={() => {
+                        setOrderToDelete(order.id);
+                        setShowConfirm(true);
+                      }}
+                      className="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded inline-flex items-center justify-center w-full sm:w-auto"
+                    >
+                      <Trash2 size={16} className="mr-1" /> DELETE
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

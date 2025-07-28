@@ -192,13 +192,19 @@ export default function MenuPage() {
     <div className="relative pt-24 min-h-screen bg-cover bg-center p-4" style={{ backgroundImage: "url('/bg.png')" }}>
       <div className="absolute inset-0 bg-white -z-10"></div>
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white px-4 py-2 shadow-md">
-        <Image src="/logo.png" alt="logo" width={90} height={50} />
-        <div className="flex gap-8 text-blue-900 font-bold text-xl">
-          <a href="/dasboardadmin/order">ORDER</a>
-          <a href="/dasboardadmin/history">HISTORY</a>
+        <Image
+          src="/logo.png"
+          alt="logo"
+          width={90}
+          height={50}
+          className="hidden md:block"
+        />
+        <div className="flex gap-4 text-blue-900 font-bold text-sm sm:text-base md:text-xl">
+          <a href="/dasboardadmin/order" className="hover:border-b-4 hover:border-blue-900 pb-1">ORDER</a>
+          <a href="/dasboardadmin/history" className="hover:border-b-4 hover:border-blue-900 pb-1">HISTORY</a>
           <a className="border-b-4 border-blue-900 pb-1">MENU</a>
         </div>
-        <button onClick={handleLogout} className="flex items-center bg-red-500 text-white px-3 py-1 rounded">
+        <button onClick={handleLogout} className="flex items-center bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">
           <LogOut size={16} className="mr-1" /> LOGOUT
         </button>
       </nav>

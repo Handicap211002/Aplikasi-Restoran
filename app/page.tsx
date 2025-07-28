@@ -28,7 +28,15 @@ export default function SplashScreen() {
       />
 
       {/* Logo - responsive positioning and sizing */}
-      <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 w-[70%] max-w-[530px] aspect-[530/410]">
+        <div
+          className="
+            absolute 
+            bottom-1/2 left-1/2 
+            translate-x-[-50%] translate-y-[-50%]
+            sm:bottom-6 sm:left-6 sm:translate-x-0 sm:translate-y-0
+            w-[70%] max-w-[530px] aspect-[530/410]
+          "
+        >
         <Image 
           src="/logo.png" 
           alt="Logo" 

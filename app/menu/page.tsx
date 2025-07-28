@@ -182,7 +182,6 @@ export default function MainMenuPage() {
 
       const order = await res.json()
 
-      setOrderItems([])
       setShowPaymentModal(false)
       setShowSuccessModal(true)
     } catch (err) {

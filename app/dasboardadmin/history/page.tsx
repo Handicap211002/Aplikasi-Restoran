@@ -104,7 +104,7 @@ export default function HistoryPage() {
         setCashierName(displayName);
         setLoading(false);
       }
-    };     
+    };
     checkSession();
   }, [router]);
 
@@ -124,8 +124,14 @@ export default function HistoryPage() {
   return (
     <div className="pt-24 min-h-screen bg-cover bg-center p-4" style={{ backgroundImage: "url('/bg.png')" }}>
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white px-4 py-2 shadow-md">
-        <Image src="/logo.png" alt="logo" width={90} height={50} />
-        <div className="flex gap-8 text-blue-900 font-bold text-xl">
+        <Image
+          src="/logo.png"
+          alt="logo"
+          width={90}
+          height={50}
+          className="hidden md:block"
+        />
+        <div className="flex gap-4 text-blue-900 font-bold text-sm sm:text-base md:text-xl">
           <a href="/dasboardadmin/order" className="hover:border-b-4 hover:border-blue-900 pb-1">ORDER</a>
           <a className="border-b-4 border-blue-900 pb-1">HISTORY</a>
           <a href="/dasboardadmin/menu" className="hover:border-b-4 hover:border-blue-900 pb-1">MENU</a>
