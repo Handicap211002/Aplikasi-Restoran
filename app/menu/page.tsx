@@ -27,6 +27,7 @@ export default function MainMenuPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredMenuItems, setFilteredMenuItems] = useState<MenuItem[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
 
   const [orderData, setOrderData] = useState({
@@ -150,7 +151,7 @@ export default function MainMenuPage() {
   }
 
   const handleSubmitOrder = async () => {
-
+    setIsSubmitting(true)
     try {
       const payload = {
         roomNumber: orderData.roomNumber,
@@ -165,7 +166,6 @@ export default function MainMenuPage() {
         })),
       }
 
-      // 🔍 Tambahkan console.log untuk debug payload
       console.log('Payload dikirim ke /api/order:', payload)
 
       const res = await fetch('/api/order', {
@@ -176,16 +176,17 @@ export default function MainMenuPage() {
         body: JSON.stringify(payload),
       })
 
-      if (!res.ok) {
-        throw new Error('Failed to place order')
-      }
+      if (!res.ok) throw new Error('Failed to place order')
 
       const order = await res.json()
-
+      setOrderItems([])
       setShowPaymentModal(false)
       setShowSuccessModal(true)
     } catch (err) {
       console.error('Order failed:', err)
+      alert('Gagal memproses order. Silakan coba lagi.')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -195,6 +196,7 @@ export default function MainMenuPage() {
     if (ref?.current) {
       ref.current.scrollIntoView({ behavior: 'smooth' })
     }
+    setShowSidebar(false)
   }
 
   const handleSearch = (query: string) => {
@@ -367,8 +369,8 @@ export default function MainMenuPage() {
               <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Search Results</h2>
               <div
                 className={`grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${showSidebar || showOrderPanel
-                    ? 'xl:grid-cols-4 2xl:grid-cols-5'
-                    : 'xl:grid-cols-6 2xl:grid-cols-7'
+                  ? 'xl:grid-cols-4 2xl:grid-cols-5'
+                  : 'xl:grid-cols-6 2xl:grid-cols-7'
                   }`}
               >
                 {filteredMenuItems.length > 0 ? (
@@ -467,8 +469,8 @@ export default function MainMenuPage() {
                 </h2>
                 <div
                   className={`grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${showSidebar || showOrderPanel
-                      ? 'xl:grid-cols-4 2xl:grid-cols-5'
-                      : 'xl:grid-cols-6 2xl:grid-cols-7'
+                    ? 'xl:grid-cols-4 2xl:grid-cols-5'
+                    : 'xl:grid-cols-6 2xl:grid-cols-7'
                     }`}
                 >
                   {menuByCategory[categoryName]?.map((item) => (
@@ -543,6 +545,11 @@ export default function MainMenuPage() {
           totalOrder={orderItems.length}
           totalPrice={orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)}
         />
+      )}
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-blue-700 rounded-full animate-spin shadow-lg" />
+        </div>
       )}
     </div>
   )

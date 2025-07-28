@@ -90,7 +90,7 @@ export const SuccessModal: FC<SuccessModalProps> = ({
             <h2 className="text-2xl font-bold text-blue-900 mb-2">Order successful</h2>
 
             <div className="text-sm text-gray-900 mb-4 leading-6">
-              <div>Order &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Number Room {orderData.roomNumber}</div>
+              <div>Order &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Number Room {orderData.roomNumber}</div>
               <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Name {orderData.customerName}</div>
             </div>
 

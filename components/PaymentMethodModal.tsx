@@ -9,35 +9,19 @@ interface PaymentMethodModalProps {
 
 export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClose, onSelect }) => {
   const [selectedMethod, setSelectedMethod] = useState<'CASH' | 'TRANSFER' | 'ROOM_CHARGE' | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     if (!isOpen) {
       setSelectedMethod(null)
-      setIsLoading(false)
     }
   }, [isOpen])
 
   if (!isOpen) return null
 
-  const handleSelect = async (method: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE') => {
-    // Jangan bisa klik lagi saat loading
-    if (isLoading) return
-
+  const handleSelect = (method: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE') => {
     setSelectedMethod(method)
-    setIsLoading(true)
-
-    // Simulasi delay
-    setTimeout(() => {
-      onSelect(method) // Tampilkan modal sukses
-      // Jangan tutup langsung. Biarkan parent yang tutup saat proses selesai.
-      setIsLoading(false)
-    }, 2000)
+    onSelect(method)
   }
-
-  const Spinner = () => (
-    <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-  )
 
   const baseClass = 'w-full py-2 sm:py-3 rounded-full font-bold transition'
   const selectedClass = 'text-white bg-gradient-to-r from-cyan-500 to-blue-700'
@@ -46,18 +30,11 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
 
   const getButtonClass = (method: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE') => {
     const isSelected = selectedMethod === method
-    const isAnyDisabled = isLoading && selectedMethod !== method
-    return `${baseClass} ${isSelected ? selectedClass : `${unselectedClass} ${!isAnyDisabled ? hoverClass : ''}`} ${isAnyDisabled ? 'opacity-50 cursor-not-allowed' : ''}`
+    return `${baseClass} ${isSelected ? selectedClass : `${unselectedClass} ${hoverClass}`}`
   }
 
   const renderButtonContent = (method: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE') => {
-    const isThisButtonLoading = isLoading && selectedMethod === method
-    return isThisButtonLoading ? (
-      <div className="flex items-center justify-center gap-2">
-        <Spinner />
-        <span>Processing...</span>
-      </div>
-    ) : method === 'ROOM_CHARGE' ? 'ROOM CHARGER' : method
+    return method === 'ROOM_CHARGE' ? 'ROOM CHARGER' : method
   }
 
   return (
@@ -74,7 +51,6 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
         <button
           onClick={() => handleSelect('CASH')}
           className={getButtonClass('CASH')}
-          disabled={isLoading}
         >
           {renderButtonContent('CASH')}
         </button>
@@ -82,7 +58,6 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
         <button
           onClick={() => handleSelect('TRANSFER')}
           className={getButtonClass('TRANSFER')}
-          disabled={isLoading}
         >
           {renderButtonContent('TRANSFER')}
         </button>
@@ -90,7 +65,6 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
         <button
           onClick={() => handleSelect('ROOM_CHARGE')}
           className={getButtonClass('ROOM_CHARGE')}
-          disabled={isLoading}
         >
           {renderButtonContent('ROOM_CHARGE')}
         </button>
@@ -98,7 +72,6 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
         <button
           onClick={onClose}
           className="text-black hover:underline text-sm flex items-center justify-center gap-1 pt-2"
-          disabled={isLoading}
         >
           ← Back
         </button>
