@@ -256,7 +256,7 @@ export default function OrderPage() {
               <h3 className="text-xl font-bold text-blue-900 mb-4">Preview Struk</h3>
 
               {/* Preview Struk */}
-              <div className="font-mono text-sm bg-gray-50 p-4 rounded mb-4">
+              <div className="font-mono text-sm text-black bg-gray-50 p-4 rounded mb-4">
                 {receiptText.split('\n').map((line, i) => (
                   <div key={i} className={line.includes('KIKI RESTAURANT') ? 'font-bold text-center' : ''}>
                     {line.replace(/\x1B\[[0-9;]*[mGKH]/g, '')}
@@ -267,7 +267,7 @@ export default function OrderPage() {
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowPrintPreview(false)}
-                  className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded"
+                  className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded text-black"
                 >
                   Batal
                 </button>
@@ -295,10 +295,10 @@ export default function OrderPage() {
       {showConfirm && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow-lg text-center space-y-4">
-            <p className="text-lg font-medium">Yakin ingin menghapus order ini?</p>
+            <p className="text-lg text-black font-medium">Yakin ingin menghapus order ini?</p>
             <div className="flex justify-center gap-4">
               <button
-                className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded"
+                className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded text-black"
                 onClick={() => {
                   setShowConfirm(false);
                   setOrderToDelete(null);

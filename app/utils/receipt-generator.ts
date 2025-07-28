@@ -36,13 +36,13 @@ export function generateKikiRestaurantReceipt(
     return ' '.repeat(leftPadding) + text;
   };
 
-
   let result = '';
   result += centerText('KIKI BEACH ISLAND RESORT') + '\n';
   result += centerText('Telp: +62 822-8923-0001') + '\n';
-  result += centerText('Pasir Gelam, Karas, Pulau Galang, Kota Batam, Kepulauan Riau 29486 Batulicin') + '\n';
+  result += centerText('Pasir Gelam, Karas, Pulau Galang') + '\n';
+  result += centerText('Kota Batam, Kepulauan Riau 29486') + '\n';
   result += `${divider}\n`;
-  result += `Tanggal   : ${formatToWIB(order.createdAt)}\n`; // 🕒 Waktu WIB
+  result += `Tanggal   : ${formatToWIB(order.createdAt)}\n`;
   result += `No. Order : #${String(order.id).padStart(5, '0')}\n`;
   result += `Tipe Pesan: ${order.orderType.replace(/_/g, ' ')}\n`;
   if (order.roomNumber) result += `Room No.  : ${order.roomNumber}\n`;

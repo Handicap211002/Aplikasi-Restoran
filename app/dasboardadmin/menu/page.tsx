@@ -292,9 +292,9 @@ export default function MenuPage() {
       {showConfirm && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow text-center space-y-4">
-            <p className="text-lg font-medium">Yakin ingin menghapus?</p>
+            <p className="text-lg text-black font-medium">Yakin ingin menghapus?</p>
             <div className="flex justify-center gap-4">
-              <button onClick={() => { setShowConfirm(false); setOrderToDelete(null); }} className="bg-gray-300 px-4 py-2 rounded">Tidak</button>
+              <button onClick={() => { setShowConfirm(false); setOrderToDelete(null); }} className="bg-gray-300 text-black px-4 py-2 rounded ">Tidak</button>
               <button onClick={() => { if (orderToDelete !== null) deleteMenu(orderToDelete); setShowConfirm(false); setOrderToDelete(null); }} className="bg-red-500 text-white px-4 py-2 rounded">Ya, Hapus</button>
             </div>
           </div>

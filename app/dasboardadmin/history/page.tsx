@@ -214,7 +214,7 @@ export default function HistoryPage() {
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-auto">
             <div className="p-6">
               <h3 className="text-xl font-bold text-blue-900 mb-4">Preview Struk</h3>
-              <div className="font-mono text-sm bg-gray-50 p-4 rounded mb-4 whitespace-pre-wrap">
+              <div className="font-mono text-sm text-black bg-gray-50 p-4 rounded mb-4 whitespace-pre-wrap">
                 {receiptText.split('\n').map((line, i) => (
                   <div key={i}>{line.replace(/\x1B\[[0-9;]*[mGKH]/g, '')}</div>
                 ))}
@@ -222,7 +222,7 @@ export default function HistoryPage() {
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowPrintPreview(false)}
-                  className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded"
+                  className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded text-black"
                 >
                   Batal
                 </button>
