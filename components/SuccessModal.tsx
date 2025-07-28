@@ -89,17 +89,11 @@ export const SuccessModal: FC<SuccessModalProps> = ({
 
             <h2 className="text-2xl font-bold text-blue-900 mb-2">Order successful</h2>
 
-            <div className="text-sm text-gray-900 mb-4 leading-6 space-y-1">
-              <div className="flex justify-between">
-                <span className="font-medium">Room Number</span>
-                <span className="truncate max-w-[60%] text-right">{orderData.roomNumber}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Customer Name</span>
-                <span className="truncate max-w-[60%] text-right">{orderData.customerName}</span>
-              </div>
+            <div className="text-sm text-gray-900 mb-4 leading-6">
+              <div>Order &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Number Room {orderData.roomNumber}</div>
+              <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Name {orderData.customerName}</div>
             </div>
-            
+
             <p className="text-sm text-gray-700 leading-5 mb-4">
               Please wait for your order<br />
               <span className="font-semibold">Thank you & enjoy.</span>
