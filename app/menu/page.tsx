@@ -181,7 +181,6 @@ export default function MainMenuPage() {
       const order = await res.json()
       setShowPaymentModal(false)
       setShowSuccessModal(true)
-      setOrderItems([])
     } catch (err) {
       console.error('Order failed:', err)
       alert('Gagal memproses order. Silakan coba lagi.')
