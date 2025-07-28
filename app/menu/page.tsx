@@ -179,9 +179,9 @@ export default function MainMenuPage() {
       if (!res.ok) throw new Error('Failed to place order')
 
       const order = await res.json()
-      setOrderItems([])
       setShowPaymentModal(false)
       setShowSuccessModal(true)
+      setOrderItems([])
     } catch (err) {
       console.error('Order failed:', err)
       alert('Gagal memproses order. Silakan coba lagi.')
