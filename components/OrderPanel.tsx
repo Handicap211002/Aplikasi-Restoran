@@ -44,18 +44,18 @@ export const OrderPanel: FC<OrderPanelProps> = ({
           {/* Header */}
           <div>
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold text-blue-900 flex items-center gap-2">
-                <span className="inline-block w-5 h-5 bg-blue-500 rounded-sm" />
+              <h2 className="text-lg font-bold text-black flex items-center gap-2">
+                <span className="inline-block w-5 h-5 bg-black rounded-sm" />
                 Order Menu
               </h2>
               <button
                 onClick={onClose}
-                className="text-2xl text-gray-400 hover:text-black"
+                className="text-1xl text-black hover:text-black"
               >
-                ×
+                Back
               </button>
             </div>
-            <p className="text-sm text-gray-500 mt-1 mb-3">Kiki Beach</p>
+            <p className="text-sm text-black mt-1 mb-3">Kiki Beach</p>
             <hr className="border-gray-300" />
           </div>
 
@@ -67,7 +67,7 @@ export const OrderPanel: FC<OrderPanelProps> = ({
               orderItems.map((item, index) => (
                 <div
                   key={index}
-                  className="relative flex items-start border border-blue-400 rounded-lg shadow p-2"
+                  className="relative flex items-start border border-black rounded-lg shadow p-2"
                 >
                   {/* Image */}
                   <div className="w-20 h-20 rounded-lg overflow-hidden mr-3">
@@ -82,7 +82,7 @@ export const OrderPanel: FC<OrderPanelProps> = ({
 
                   {/* Content */}
                   <div className="flex-1">
-                    <h4 className="text-sm font-bold text-blue-900 leading-tight">
+                    <h4 className="text-sm font-bold text-black leading-tight">
                       {item.name.toUpperCase()}
                     </h4>
                     <p className="text-sm text-gray-800 leading-tight">
@@ -96,14 +96,14 @@ export const OrderPanel: FC<OrderPanelProps> = ({
                     <div className="flex items-center gap-2 mt-2">
                       <button
                         onClick={() => onDecrease(index)}
-                        className="w-6 h-6 text-sm font-bold bg-gray-200 text-blue-800 rounded-md"
+                        className="w-6 h-6 text-sm font-bold bg-gray-200 text-black rounded-md"
                       >
                         –
                       </button>
                       <span className="text-sm font-semibold">{item.quantity}</span>
                       <button
                         onClick={() => onIncrease(index)}
-                        className="w-6 h-6 text-sm font-bold bg-gray-200 text-blue-800 rounded-md"
+                        className="w-6 h-6 text-sm font-bold bg-gray-200 text-black rounded-md"
                       >
                         +
                       </button>
@@ -113,7 +113,7 @@ export const OrderPanel: FC<OrderPanelProps> = ({
                   {/* Remove button */}
                   <button
                     onClick={() => onRemove(index)}
-                    className="absolute top-2 right-2 text-white bg-red-500 hover:bg-red-600 w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                    className="absolute top-2 right-2 text-black w-5 h-5 rounded-full flex items-center justify-center text-xl"
                     title="Hapus item"
                   >
                     ×
@@ -125,15 +125,15 @@ export const OrderPanel: FC<OrderPanelProps> = ({
 
           {/* Footer (Order summary and button) */}
           <div className="mt-4">
-            <div className="rounded-xl p-4" style={{ backgroundColor: '#007FAE' }}>
-              <div className="flex justify-between text-white text-sm mb-2">
+            <div className="rounded-xl p-4 border border-black" style={{ backgroundColor: '#ffffffff' }}>
+              <div className="flex justify-between text-black text-sm mb-2">
                 <span>{orderItems.length} items</span>
                 <span className="font-bold text-base">Rp.{total.toLocaleString()}</span>
               </div>
               <button
                 disabled={orderItems.length === 0}
                 onClick={onOrder}
-                className="w-full bg-white text-sky-700 font-bold py-2 rounded-xl transition hover:bg-gray-100 disabled:opacity-50"
+                className="w-full border border-black text-black font-bold py-2 rounded-xl transition  disabled:opacity-50"
               >
                 Order
               </button>

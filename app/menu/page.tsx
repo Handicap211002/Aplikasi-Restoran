@@ -547,7 +547,7 @@ export default function MainMenuPage() {
       )}
       {isSubmitting && (
         <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-blue-700 rounded-full animate-spin shadow-lg" />
+          <div className="w-16 h-16 border-4 border-black border-t-white rounded-full animate-spin shadow-lg" />
         </div>
       )}
     </div>

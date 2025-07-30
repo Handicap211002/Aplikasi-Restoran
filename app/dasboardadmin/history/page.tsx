@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { Trash2, Printer, Eye, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { generateKikiRestaurantReceipt } from '../../utils/receipt-generator';
 import type {
   OrderStatus,
@@ -120,6 +122,58 @@ export default function HistoryPage() {
   const monthLabel = (date: Date) => {
     return `${date.toLocaleString('default', { month: 'long' }).toUpperCase()} ${date.getFullYear()}`;
   };
+  const handleExportToExcel = async () => {
+  if (!orders.length) {
+    alert("Tidak ada data order untuk diekspor.");
+    return;
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Order History');
+
+  // Header
+  worksheet.columns = [
+    { header: 'Tanggal', key: 'tanggal', width: 15 },
+    { header: 'Order ID', key: 'id', width: 25 },
+    { header: 'Customer', key: 'customer', width: 20 },
+    { header: 'Room', key: 'room', width: 10 },
+    { header: 'Order Type', key: 'orderType', width: 15 },
+    { header: 'Total (Rp)', key: 'totalPrice', width: 15 },
+    { header: 'Status', key: 'status', width: 12 },
+    { header: 'Payment', key: 'paymentMethod', width: 15 }
+  ];
+
+  // Isi data
+  orders.forEach(order => {
+    worksheet.addRow({
+      tanggal: order.createdAt.toLocaleDateString(),
+      id: order.id,
+      customer: order.customerName,
+      room: order.roomNumber,
+      orderType: order.orderType.replace(/_/g, ' '),
+      totalPrice: order.totalPrice,
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+    });
+  });
+
+  // Tambahkan total summary di bawah
+  const totalRow = worksheet.addRow([]);
+  totalRow.getCell(5).value = 'TOTAL';
+  totalRow.getCell(6).value = {
+    formula: `SUM(F2:F${orders.length + 1})`, // kolom totalPrice
+    result: orders.reduce((sum, o) => sum + o.totalPrice, 0)
+  };
+  totalRow.font = { bold: true };
+
+  // Export
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  saveAs(blob, `Order_History_${selectedMonth}.xlsx`);
+};
+
 
   return (
     <div className="pt-24 min-h-screen bg-cover bg-center p-4" style={{ backgroundImage: "url('/bg.png')" }}>
@@ -167,6 +221,12 @@ export default function HistoryPage() {
           className="flex items-center gap-1 border border-blue-900 text-black px-4 py-1 rounded hover:bg-blue-900 hover:text-white transition"
         >
           <Printer size={16} /> PRINT ALL ORDER
+        </button>
+        <button
+          onClick={handleExportToExcel}
+          className="flex items-center gap-1 border border-blue-900 text-black px-4 py-1 rounded hover:bg-blue-900 hover:text-white transition"
+        >
+          EXPORT TO EXCEL
         </button>
       </div>
 

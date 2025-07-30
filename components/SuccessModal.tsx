@@ -1,5 +1,6 @@
 'use client'
-import { FC, useEffect, useState, useRef } from 'react';
+import { FC, useState } from 'react';
+import { useRouter } from 'next/navigation'; // ⬅️ tambahkan ini
 
 interface SuccessModalProps {
   isOpen: boolean
@@ -27,10 +28,12 @@ export const SuccessModal: FC<SuccessModalProps> = ({
   totalOrder,
   totalPrice
 }) => {
+  const router = useRouter();
   const [isSubmitting] = useState(false)
   const [error] = useState<string | null>(null)
 
   if (!isOpen) return null
+  const redirectPath = '/';
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
@@ -71,7 +74,7 @@ export const SuccessModal: FC<SuccessModalProps> = ({
           <>
             {/* Tampilan sukses (sama seperti versi lama) */}
             <div className="flex justify-center mb-3">
-              <div className="bg-green-500 rounded-full p-2">
+              <div className="bg-black rounded-full p-2">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-8 w-8 text-white"
@@ -87,7 +90,7 @@ export const SuccessModal: FC<SuccessModalProps> = ({
               </div>
             </div>
 
-            <h2 className="text-2xl font-bold text-blue-900 mb-2">Order successful</h2>
+            <h2 className="text-2xl font-bold text-black mb-2">Order successful</h2>
 
             <div className="text-sm text-gray-900 mb-4 leading-6">
               <div>Order &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Number Room {orderData.roomNumber}</div>
@@ -105,8 +108,10 @@ export const SuccessModal: FC<SuccessModalProps> = ({
             </div>
 
             <button
-              onClick={onClose}
-              className="px-8 py-1.5 border-2 border-blue-500 text-blue-700 font-semibold rounded-full hover:bg-gradient-to-r hover:from-cyan-500 hover:to-blue-700 hover:text-white transition"
+              onClick={() => {
+                router.replace(redirectPath);
+              }}
+              className="px-8 py-1.5 border border-black text-black font-semibold rounded-full transition"
             >
               FINISH
             </button>

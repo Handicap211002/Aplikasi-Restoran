@@ -5,7 +5,55 @@ import { supabase } from '@/lib/supabaseClient';
 import { Trash2, Printer, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useRef } from 'react';
 import { generateKikiRestaurantReceipt } from '../../utils/receipt-generator';
+function normalizeToUTCDate(value: string | Date) {
+  if (value instanceof Date) return value;
+  const s = String(value).trim();
+  const hasTZ = /([zZ]|[+\-]\d{2}:\d{2})$/.test(s);
+  const iso = hasTZ ? s : s + 'Z';
+  return new Date(iso);
+}
+
+export function formatToWIB(value: string | Date) {
+  const d = normalizeToUTCDate(value);
+  return new Intl.DateTimeFormat('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Jakarta',
+  }).format(d);
+}
+
+export function getWIBDayRangeUTCISO(base: Date = new Date()) {
+  const wibOffsetMs = 7 * 60 * 60 * 1000;
+  const wib00 = new Date(base.getTime() + wibOffsetMs);
+  wib00.setHours(0, 0, 0, 0);
+
+  const startUtcMs = wib00.getTime() - wibOffsetMs;
+  const endUtcMs = startUtcMs + 24 * 60 * 60 * 1000;
+
+  return {
+    isoStart: new Date(startUtcMs).toISOString(),
+    isoEnd: new Date(endUtcMs).toISOString(),
+  };
+}
+// Hitung selisih menit dari createdAt sampai sekarang
+function getElapsedMinutes(createdAt: string | Date) {
+  const d = normalizeToUTCDate(createdAt);
+  return Math.floor((Date.now() - d.getTime()) / 60000);
+}
+
+// Tentukan warna baris sesuai usia order
+function getRowClass(createdAt: string | Date) {
+  const m = getElapsedMinutes(createdAt);
+  if (m >= 60) return 'bg-black text-white';   // ≥ 60 menit
+  if (m >= 40) return 'bg-red-100';            // ≥ 40 menit
+  if (m >= 30) return 'bg-yellow-100';         // ≥ 30 menit
+  if (m >= 20) return 'bg-green-100';          // ≥ 20 menit
+  return '';
+}
+
 export default function OrderPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,22 +65,45 @@ export default function OrderPage() {
   const [printData, setPrintData] = useState<any>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [receiptText, setReceiptText] = useState('');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [showNewOrderPopup, setShowNewOrderPopup] = useState(false);
+  const [incomingOrder, setIncomingOrder] = useState<any>(null);
+
+  // Tick per menit supaya warna baris update otomatis tanpa reload
+  const [, setNowTick] = useState(0);
   const fetchOrders = async () => {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
       if (authError || !user) {
         router.push('/kasirlogin');
         return;
       }
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const isoStart = today.toISOString();
-      const isoEnd = new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString();
+      const { isoStart, isoEnd } = getWIBDayRangeUTCISO();
 
       const { data, error } = await supabase
         .from('Order')
-        .select('*')
+        .select(`
+          id,
+          roomNumber,
+          customerName,
+          orderType,
+          paymentMethod,
+          totalPrice,
+          createdAt,
+          isarchived,
+          orderItems:OrderItem (
+            id,
+            note,
+            menuItem:MenuItem (
+              name
+            )
+          )
+        `)
         .gte('createdAt', isoStart)
         .lt('createdAt', isoEnd)
         .eq('isarchived', false)
@@ -44,13 +115,34 @@ export default function OrderPage() {
         return;
       }
 
-      setOrders(data || []);
+      setOrders(data ?? []);
       setError(null);
     } catch (err) {
       console.error('Unexpected error:', err);
       setError('Terjadi kesalahan saat memuat order.');
     }
   };
+  function stopBellAndClose() {
+    const audio = audioRef.current;
+    if (audio) {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch { }
+    }
+    setShowNewOrderPopup(false);
+  }
+
+  // Jika autoplay diblok, user bisa memulai suara manual
+  function startBell() {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch((err) => {
+        console.warn('Cannot start audio:', err);
+      });
+    }
+  }
 
   const handleDeleteOrder = async (orderId: number) => {
     try {
@@ -166,13 +258,31 @@ export default function OrderPage() {
           event: 'INSERT',
           schema: 'public',
           table: 'Order',
-          filter: 'isarchived=eq.false'
-        }, () => fetchOrders())
+          filter: 'isarchived=eq.false',
+        }, (payload) => {
+          // refresh data
+          fetchOrders();
+
+          // Simpan info order masuk (opsional ditampilkan di popup)
+          setIncomingOrder(payload.new);
+          setShowNewOrderPopup(true);
+
+          // Coba bunyikan bel
+          const audio = audioRef.current;
+          if (audio) {
+            // Restart dari awal
+            audio.currentTime = 0;
+            audio.play().catch((err) => {
+              // Autoplay bisa diblok browser — popup tetap muncul, user bisa tekan tombol untuk mulai/stop.
+              console.warn('Autoplay blocked:', err);
+            });
+          }
+        })
         .on('postgres_changes', {
           event: 'UPDATE',
           schema: 'public',
           table: 'Order',
-          filter: 'isarchived=eq.true'
+          filter: 'isarchived=eq.true',
         }, () => fetchOrders())
         .subscribe();
 
@@ -181,6 +291,28 @@ export default function OrderPage() {
       };
     }
   }, [loading]);
+
+  // Siapkan audio lonceng sekali saat mount
+  useEffect(() => {
+    const a = new Audio('/bell.mp3'); // ganti jika nama file lain
+    a.loop = true;
+    audioRef.current = a;
+
+    // cleanup
+    return () => {
+      try {
+        a.pause();
+      } catch { }
+      audioRef.current = null;
+    };
+  }, []);
+
+  // Re-render tiap 60 detik agar warna baris mengikuti umur order
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(t => t + 1), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
 
   if (loading) return <p className="text-center mt-10 text-blue-900">Memuat...</p>;
 
@@ -209,26 +341,42 @@ export default function OrderPage() {
         <table className="min-w-full table-auto text-center text-blue-900">
           <thead className="bg-blue-100">
             <tr>
-              <th className="px-2 py-2">ORDER ID</th>
-              <th className="px-2 py-2">CUSTOMER</th>
+              <th className="px-2 py-2">Time Order</th>
               <th className="px-2 py-2">ROOM</th>
+              <th className="px-2 py-2">CUSTOMER</th>
+              <th className="px-2 py-2">ORDER</th>
               <th className="px-2 py-2">ORDER TYPE</th>
-              <th className="px-2 py-2">TOTAL</th>
-              <th className="px-2 py-2">STATUS</th>
               <th className="px-2 py-2">PAYMENT</th>
+              <th className="px-2 py-2">TOTAL</th>
               <th className="px-6 py-2">ACTION</th>
             </tr>
           </thead>
           <tbody>
             {orders.map(order => (
-              <tr key={order.id} className="hover:bg-blue-50 transition-colors">
-                <td className="py-2">{order.id}</td>
-                <td className="py-2">{order.customerName}</td>
+              <tr
+                key={order.id}
+                className={`${getRowClass(order.createdAt)} transition-colors ${getElapsedMinutes(order.createdAt) >= 60 ? 'hover:bg-gray-900' : 'hover:bg-blue-50'}`}
+              >
+                <td className="py-2">{formatToWIB(order.createdAt)}</td>
                 <td className="py-2">{order.roomNumber}</td>
+                <td className="py-2">{order.customerName}</td>
+
+                {/* Kolom STATUS diganti menjadi Nama Menu → Note */}
+                <td className="py-2">
+                  <div className="flex flex-col gap-1">
+                    {order.orderItems?.map(
+                      (oi: { id: number; note: string | null; menuItem?: { name?: string | null } | null }) => (
+                        <span key={oi.id}>
+                          {oi.menuItem?.name ?? 'Item'} &rarr; {oi.note?.trim() || '–'}
+                        </span>
+                      )
+                    )}
+                  </div>
+                </td>
+
                 <td className="py-2">{order.orderType}</td>
-                <td className="py-2">Rp.{order.totalPrice?.toLocaleString() ?? 0}</td>
-                <td className="py-2">{order.status}</td>
                 <td className="py-2">{order.paymentMethod}</td>
+                <td className="py-2">Rp.{order.totalPrice?.toLocaleString('id-ID') ?? 0}</td>
                 <td className="py-2">
                   <div className="flex flex-col sm:flex-row justify-center items-center gap-2 px-2">
                     <button
@@ -325,6 +473,32 @@ export default function OrderPage() {
                 }}
               >
                 Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showNewOrderPopup && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-xl p-6 text-blue-900">
+            <h3 className="text-xl font-bold mb-2">Order baru masuk!</h3>
+            <p className="mb-4">
+              {incomingOrder?.customerName
+                ? `Dari: ${incomingOrder.customerName} • Room: ${incomingOrder.roomNumber ?? '-'}`
+                : 'Ada order baru yang masuk.'}
+            </p>
+            <div className="flex flex-wrap gap-3 justify-end">
+              <button
+                onClick={startBell}
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-black"
+              >
+                Bunyi lagi
+              </button>
+              <button
+                onClick={stopBellAndClose}
+                className="px-4 py-2 rounded bg-red-500 hover:bg-red-600 text-white"
+              >
+                Matikan bunyi & Tutup
               </button>
             </div>
           </div>

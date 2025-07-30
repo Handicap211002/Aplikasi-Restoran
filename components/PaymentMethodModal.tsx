@@ -24,16 +24,16 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
   }
 
   const baseClass = 'w-full py-2 sm:py-3 rounded-full font-bold transition'
-  const selectedClass = 'text-white bg-gradient-to-r from-cyan-500 to-blue-700'
-  const hoverClass = 'hover:text-white hover:bg-gradient-to-r hover:from-cyan-500 hover:to-blue-700'
-  const unselectedClass = 'text-blue-700 border-2 border-blue-500 bg-white'
+  const selectedClass = 'text-black'
+  const hoverClass = 'hover:text-black '
+  const unselectedClass = 'text-black border-2 border-black'
 
   const getButtonClass = (method: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE') => {
     const isSelected = selectedMethod === method
     return `${baseClass} ${isSelected ? selectedClass : `${unselectedClass} ${hoverClass}`}`
   }
 
-  const renderButtonContent = (method: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE') => {
+  const renderButtonContent = (method: 'CASH' | 'DEBIT / CREDIT CARD / TRANSFER' | 'ROOM_CHARGE') => {
     return method === 'ROOM_CHARGE' ? 'ROOM CHARGER' : method
   }
 
@@ -59,7 +59,7 @@ export const PaymentMethodModal: FC<PaymentMethodModalProps> = ({ isOpen, onClos
           onClick={() => handleSelect('TRANSFER')}
           className={getButtonClass('TRANSFER')}
         >
-          {renderButtonContent('TRANSFER')}
+          {renderButtonContent('DEBIT / CREDIT CARD / TRANSFER')}
         </button>
 
         <button

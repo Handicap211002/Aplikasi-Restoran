@@ -30,12 +30,12 @@ export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
         <button
           onClick={onClose}
           type="button"
-          className="absolute top-3 right-3 text-red-600 hover:text-red-800 text-xl font-bold"
+          className="absolute top-3 right-3 text-black hover:text-black text-xl font-bold"
         >
           ×
         </button>
 
-        <h3 className="text-2xl font-bold text-center text-blue-900 mb-3">{item.name}</h3>
+        <h3 className="text-2xl font-bold text-center text-black mb-3">{item.name}</h3>
 
         <div className="w-full h-48 relative mb-4 rounded-lg overflow-hidden">
           {item.image ? (
@@ -73,7 +73,7 @@ export const ModalDetail: FC<ModalDetailProps> = ({ item, onAdd, onClose }) => {
 
         <button
           type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2"
+          className="w-full bg-white border border-black hover:bg-white text-black py-2 rounded-lg font-bold flex items-center justify-center gap-2"
         >
           🛒 <span>add</span>
         </button>

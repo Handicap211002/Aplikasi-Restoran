@@ -35,12 +35,12 @@ export const OrderModal: FC<OrderModalProps> = ({
       <div className="bg-white p-6 rounded-xl w-[90%] max-w-md shadow-xl space-y-6 relative border border-blue-300">
 
         {/* Close button */}
-        <button onClick={onClose} className="absolute right-4 top-4 text-red-600 text-2xl">
+        <button onClick={onClose} className="absolute right-4 top-4 text-black text-2xl">
           <FaTimes />
         </button>
 
         {/* Title */}
-        <h2 className="text-3xl font-bold text-center text-blue-900">ORDER ROOM</h2>
+        <h2 className="text-3xl font-bold text-center text-black">ORDER ROOM</h2>
 
         {/* Room Number */}
         <div className="relative">
@@ -51,7 +51,7 @@ export const OrderModal: FC<OrderModalProps> = ({
             value={orderData.roomNumber}
             onChange={(e) => setOrderData((prev) => ({ ...prev, roomNumber: e.target.value.replace(/\D/g, '') }))}
             placeholder="Room Number"
-            className="w-full border border-gray-300 rounded-lg px-10 py-3 text-sm text-black"
+            className="w-full border border-black rounded-lg px-10 py-3 text-sm text-black"
           />
           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black-500 text-lg">🏨</span>
         </div>
@@ -63,22 +63,22 @@ export const OrderModal: FC<OrderModalProps> = ({
             value={orderData.customerName}
             onChange={(e) => setOrderData((prev) => ({ ...prev, customerName: e.target.value }))}
             placeholder="Name"
-            className="w-full border border-gray-300 rounded-lg px-10 py-3 text-sm text-black"
+            className="w-full border border-black rounded-lg px-10 py-3 text-sm text-black"
           />
           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black-500 text-lg">👤</span>
         </div>
 
         {/* Order Type */}
-        <h2 className="text-2xl font-bold text-center text-blue-900">ORDER TYPE</h2>
+        <h2 className="text-2xl font-bold text-center text-black">ORDER TYPE</h2>
         <div className="flex flex-wrap justify-center gap-3">
           {['IN_RESTAURANT', 'DELIVERY_ROOM', 'TAKE_AWAY'].map((type) => (
             <button
               key={type}
               onClick={() => setOrderData((prev) => ({ ...prev, orderType: type as any }))}
-              className={`px-4 py-2 rounded-full border border-blue-900 text-xs sm:text-xs text-[11px] font-semibold 
+              className={`px-4 py-2 rounded-full border border-black text-xs sm:text-xs text-[11px] font-semibold 
                 ${orderData.orderType === type
-                  ? 'bg-blue-800 text-white'
-                  : 'text-blue-900 hover:bg-blue-100'
+                  ? 'bg-black text-white'
+                  : 'text-black '
                 } 
                 sm:px-4 px-2 sm:py-2 py-1
               `}
@@ -98,7 +98,7 @@ export const OrderModal: FC<OrderModalProps> = ({
         {/* Payment Button */}
         <button
           onClick={onNext}
-          className="w-full flex items-center justify-center bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-full font-bold text-lg space-x-3"
+          className="w-full flex items-center justify-center border border-black text-black py-3 rounded-full font-bold text-lg space-x-3"
         >
           <FaCreditCard />
           <span>Payment</span>
