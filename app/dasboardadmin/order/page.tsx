@@ -15,7 +15,7 @@ function normalizeToUTCDate(value: string | Date) {
   return new Date(iso);
 }
 
-export function formatToWIB(value: string | Date) {
+function formatToWIB(value: string | Date) {
   const d = normalizeToUTCDate(value);
   return new Intl.DateTimeFormat('id-ID', {
     hour: '2-digit',
@@ -25,7 +25,7 @@ export function formatToWIB(value: string | Date) {
   }).format(d);
 }
 
-export function getWIBDayRangeUTCISO(base: Date = new Date()) {
+function getWIBDayRangeUTCISO(base: Date = new Date()) {
   const wibOffsetMs = 7 * 60 * 60 * 1000;
   const wib00 = new Date(base.getTime() + wibOffsetMs);
   wib00.setHours(0, 0, 0, 0);
