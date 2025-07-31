@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import type { MenuItem } from '@/types';
 import { generateKikiRestaurantReceipt } from '../../utils/receipt-generator';
 import type {
   OrderStatus,
@@ -18,10 +19,7 @@ import type {
 
 type Order = PrismaOrder & {
   orderItems: (OrderItem & {
-    menuItem: {
-      name: string;
-      price: number;
-    };
+    menuItem: MenuItem;
   })[];
 };
 
@@ -41,7 +39,7 @@ export default function HistoryPage() {
   const fetchOrders = async () => {
     let query = supabase
       .from('Order')
-      .select(`*, orderItems:OrderItem(*, menuItem:MenuItem(name, price))`)
+      .select(`*, orderItems:OrderItem(*, menuItem:MenuItem(*, category:Category(*)))`)
       .in('status', ['SUCCESS', 'FAILED']);
 
     if (!viewAll) {
@@ -122,57 +120,111 @@ export default function HistoryPage() {
   const monthLabel = (date: Date) => {
     return `${date.toLocaleString('default', { month: 'long' }).toUpperCase()} ${date.getFullYear()}`;
   };
+
   const handleExportToExcel = async () => {
-  if (!orders.length) {
-    alert("Tidak ada data order untuk diekspor.");
-    return;
-  }
+    if (!orders.length) {
+      alert("Tidak ada data order untuk diekspor.");
+      return;
+    }
 
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Order History');
+    const startDate = new Date(`${selectedMonth}-01`);
+    const endDate = new Date(startDate);
+    endDate.setMonth(startDate.getMonth() + 1);
 
-  // Header
-  worksheet.columns = [
-    { header: 'Tanggal', key: 'tanggal', width: 15 },
-    { header: 'Order ID', key: 'id', width: 25 },
-    { header: 'Customer', key: 'customer', width: 20 },
-    { header: 'Room', key: 'room', width: 10 },
-    { header: 'Order Type', key: 'orderType', width: 15 },
-    { header: 'Total (Rp)', key: 'totalPrice', width: 15 },
-    { header: 'Status', key: 'status', width: 12 },
-    { header: 'Payment', key: 'paymentMethod', width: 15 }
-  ];
+    const groupedData: Record<string, Record<string, { quantity: number; price: number }>> = {};
 
-  // Isi data
-  orders.forEach(order => {
-    worksheet.addRow({
-      tanggal: order.createdAt.toLocaleDateString(),
-      id: order.id,
-      customer: order.customerName,
-      room: order.roomNumber,
-      orderType: order.orderType.replace(/_/g, ' '),
-      totalPrice: order.totalPrice,
-      status: order.status,
-      paymentMethod: order.paymentMethod,
+    orders.forEach(order => {
+      if (order.status !== 'SUCCESS') return;
+
+      order.orderItems.forEach(item => {
+        const category = item.menuItem.category.name;
+        const menuName = item.menuItem.name;
+        const price = item.menuItem.price;
+
+        if (!groupedData[category]) groupedData[category] = {};
+        if (!groupedData[category][menuName]) {
+          groupedData[category][menuName] = { quantity: 0, price };
+        }
+
+        groupedData[category][menuName].quantity += item.quantity;
+      });
     });
-  });
 
-  // Tambahkan total summary di bawah
-  const totalRow = worksheet.addRow([]);
-  totalRow.getCell(5).value = 'TOTAL';
-  totalRow.getCell(6).value = {
-    formula: `SUM(F2:F${orders.length + 1})`, // kolom totalPrice
-    result: orders.reduce((sum, o) => sum + o.totalPrice, 0)
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Laporan Penjualan');
+
+    // Judul
+    const title = `Laporan Penjualan ${startDate.toLocaleDateString()} s/d ${endDate.toLocaleDateString()}`;
+    worksheet.mergeCells('A1:E1');
+    const titleCell = worksheet.getCell('A1');
+    titleCell.value = title;
+    titleCell.font = { bold: true, size: 14 };
+    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    worksheet.getRow(1).height = 24;
+
+    // Spasi kosong baris 2
+    worksheet.addRow([]);
+
+    // Header
+    worksheet.columns = [
+      { key: 'no', width: 5 },
+      { key: 'menu', width: 30 },
+      { key: 'jumlah', width: 15 },
+      { key: 'harga', width: 15, style: { numFmt: '0' } },
+      { key: 'total', width: 20, style: { numFmt: '0' } },
+    ];
+
+    const headerRow = worksheet.addRow(['NO', 'MENU', 'JUMLAH LAKU', 'HARGA JUAL', 'TOTAL PENDAPATAN']);
+    headerRow.font = { bold: true };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    headerRow.eachCell(cell => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+
+    // Data isi
+    let count = 1;
+    for (const [category, menus] of Object.entries(groupedData)) {
+      const catRow = worksheet.addRow(['', category]);
+      const rowIndex = catRow.number;
+      worksheet.mergeCells(`B${rowIndex}:E${rowIndex}`);
+      catRow.font = { bold: true };
+      catRow.alignment = { horizontal: 'left' };
+      for (let i = 2; i <= 5; i++) {
+        catRow.getCell(i).border = {
+          top: { style: 'thin' },
+          bottom: { style: 'thin' },
+          left: i === 2 ? { style: 'thin' } : undefined,
+          right: i === 5 ? { style: 'thin' } : undefined,
+        };
+      }
+
+      for (const [menuName, data] of Object.entries(menus)) {
+        const total = data.quantity * data.price;
+        const row = worksheet.addRow([count++, menuName, data.quantity, data.price, total]);
+        row.alignment = { vertical: 'middle', horizontal: 'left' };
+        row.eachCell(cell => {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' },
+          };
+        });
+      }
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    saveAs(blob, `Laporan_Penjualan_${startDate.toLocaleDateString()}_sd_${endDate.toLocaleDateString()}.xlsx`);
   };
-  totalRow.font = { bold: true };
 
-  // Export
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
-  saveAs(blob, `Order_History_${selectedMonth}.xlsx`);
-};
 
 
   return (

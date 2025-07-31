@@ -12,6 +12,36 @@ import { PaymentMethodModal } from '../../components/PaymentMethodModal'
 import { SuccessModal } from '../../components/SuccessModal'
 import { PaymentMethod } from '@prisma/client'
 import { supabase } from '@/lib/supabaseClient'
+// Tambahkan di dekat import paling atas (opsional, untuk rapi)
+type OrderTypeLite = 'IN_RESTAURANT' | 'DELIVERY_ROOM' | 'TAKE_AWAY'
+type OrderData = {
+  roomNumber: string
+  customerName: string
+  orderType: OrderTypeLite
+  paymentMethod: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE' // boleh juga pakai Prisma PaymentMethod
+  isPreOrder: boolean
+  scheduledAt: string | null // ISO UTC atau null
+}
+/** Ambil jam & menit *saat ini* di WIB (Asia/Jakarta) */
+function getWIBHourMinuteNow() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Jakarta',
+  }).formatToParts(new Date())
+  const hh = Number(parts.find(p => p.type === 'hour')?.value ?? '0')
+  const mm = Number(parts.find(p => p.type === 'minute')?.value ?? '0')
+  return { hh, mm, total: hh * 60 + mm }
+}
+
+/** Tutup antara 21:30–07:30 WIB (07:30 sudah buka lagi) */
+function isRestaurantClosedNowWIB(): boolean {
+  const { total } = getWIBHourMinuteNow()
+  const CLOSE_START = 21 * 60 + 30   // 21:30
+  const OPEN_TIME = 7 * 60 + 30    // 07:30
+  return total >= CLOSE_START || total < OPEN_TIME
+}
 
 
 export default function MainMenuPage() {
@@ -28,14 +58,18 @@ export default function MainMenuPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredMenuItems, setFilteredMenuItems] = useState<MenuItem[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showClosedModal, setShowClosedModal] = useState(false)
 
 
-  const [orderData, setOrderData] = useState({
+  const [orderData, setOrderData] = useState<OrderData>({
     roomNumber: '',
     customerName: '',
-    orderType: 'IN_RESTAURANT' as 'IN_RESTAURANT' | 'DELIVERY_ROOM' | 'TAKE_AWAY',
-    paymentMethod: 'CASH' as 'CASH' | 'TRANSFER' | 'ROOM_CHARGE'
+    orderType: 'IN_RESTAURANT',
+    paymentMethod: 'CASH',
+    isPreOrder: false,
+    scheduledAt: null,
   })
+
 
   const kikiRef = useRef<HTMLDivElement>(null)
   const soupRef = useRef<HTMLDivElement>(null)
@@ -153,11 +187,16 @@ export default function MainMenuPage() {
   const handleSubmitOrder = async () => {
     setIsSubmitting(true)
     try {
+      const scheduledAtISO =
+        orderData.isPreOrder && orderData.scheduledAt ? orderData.scheduledAt : null
+
       const payload = {
         roomNumber: orderData.roomNumber,
         customerName: orderData.customerName,
         orderType: orderData.orderType,
         paymentMethod: orderData.paymentMethod,
+        scheduledAt: scheduledAtISO,        // ⬅️ kirim
+        isPreOrder: !!scheduledAtISO,       // ⬅️ kirim
         items: orderItems.map(item => ({
           menuItemId: item.id,
           quantity: item.quantity,
@@ -168,22 +207,25 @@ export default function MainMenuPage() {
 
       console.log('Payload dikirim ke /api/order:', payload)
 
-      const res = await fetch('/api/order', {
+      const res = await fetch('/api/order', {   // ⬅️ tetap singular (sesuai route kamu)
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
 
-      if (!res.ok) throw new Error('Failed to place order')
+      const text = await res.text()
+      let data: any = null
+      try { data = JSON.parse(text) } catch { }
+      if (!res.ok) {
+        const msg = data?.error || data?.message || text || `HTTP ${res.status}`
+        throw new Error(msg)
+      }
 
-      const order = await res.json()
       setShowPaymentModal(false)
       setShowSuccessModal(true)
     } catch (err) {
       console.error('Order failed:', err)
-      alert('Gagal memproses order. Silakan coba lagi.')
+      alert(`Gagal memproses order: ${(err as Error).message}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -219,9 +261,15 @@ export default function MainMenuPage() {
 
 
   const openModal = (item: MenuItem) => {
+
+    if (isRestaurantClosedNowWIB()) {
+      setShowClosedModal(true)
+      return
+    }
     setSelectedItem({ ...item, quantity: 1 })
     setShowModal(true)
   }
+
 
   const closeModal = () => {
     setSelectedItem(null)
@@ -548,6 +596,25 @@ export default function MainMenuPage() {
       {isSubmitting && (
         <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center">
           <div className="w-16 h-16 border-4 border-black border-t-white rounded-full animate-spin shadow-lg" />
+        </div>
+      )}
+      {showClosedModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-xl p-6 text-blue-900">
+            <h3 className="text-xl font-bold mb-2">Restaurant closed</h3>
+            <p className="text-sm mb-4">
+              Sorry, the restaurant is closed from <b>9:30 PM–7:30 AM WIB</b>.
+              Please return after <b>07:30 AM WIB</b> Or <i>pre‑order</i> during operating hours.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowClosedModal(false)}
+                className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Done
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

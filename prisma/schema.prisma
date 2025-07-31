@@ -38,7 +38,11 @@ model Order {
   status        OrderStatus
   createdAt     DateTime      @default(now())
   isarchived    Boolean?      @default(false)
+  isPreOrder    Boolean       @default(false)
+  scheduledAt   DateTime?     @db.Timestamptz(6)
   orderItems    OrderItem[]
+
+  @@index([isPreOrder, scheduledAt], map: "idx_order_ispreorder_scheduledat")
 }
 
 model OrderItem {

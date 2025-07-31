@@ -47,12 +47,46 @@ function getElapsedMinutes(createdAt: string | Date) {
 // Tentukan warna baris sesuai usia order
 function getRowClass(createdAt: string | Date) {
   const m = getElapsedMinutes(createdAt);
-  if (m >= 60) return 'bg-black text-white';   // ≥ 60 menit
-  if (m >= 40) return 'bg-red-100';            // ≥ 40 menit
+  if (m >= 60) return 'bg-red-400';            // ≥ 40 menit
   if (m >= 30) return 'bg-yellow-100';         // ≥ 30 menit
-  if (m >= 20) return 'bg-green-100';          // ≥ 20 menit
+  if (m >= 0) return 'bg-green-100';          // ≥ 20 menit
   return '';
 }
+// Sisa menit dari sekarang ke scheduledAt (bisa negatif kalau sudah lewat)
+function getMinutesUntil(value: string | Date | null | undefined) {
+  if (!value) return null;
+  const d = normalizeToUTCDate(value);
+  return Math.floor((d.getTime() - Date.now()) / 60000);
+}
+
+/**
+ * Warna baris:
+ * - Non pre‑order: pakai getRowClass(createdAt) (sudah ada).
+ * - Pre‑order: berdasarkan sisa menit ke scheduledAt:
+ *   >= 60     : indigo-50 (masih lama)
+ *   30–59     : indigo-100
+ *   10–29     : yellow-100 (mendekati)
+ *   0–9       : yellow-200 (sangat dekat)
+ *   -1 – -10  : red-100 (baru lewat)
+ *   -11 – -30 : red-200 (telat)
+ *   <= -31    : bg-black text-white (sangat telat)
+ */
+function getRowClassForOrder(order: any) {
+  if (!order?.isPreOrder) {
+    // order biasa: pakai logic lama
+    return getRowClass(order?.createdAt);
+  }
+
+  const mins = getMinutesUntil(order?.scheduledAt);
+  if (mins === null) return 'bg-indigo-50'; // fallback jika scheduledAt null
+
+  if (mins <= 0) return 'bg-red-400';        // waktu pre-order sudah tiba atau lewat
+  if (mins <= 20) return 'bg-yellow-100';    // 1–20 menit lagi
+  if (mins <= 40) return 'bg-green-100';     // 21–40 menit lagi
+  return 'bg-indigo-50';                     // >40 menit lagi
+}
+
+
 
 export default function OrderPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -68,6 +102,7 @@ export default function OrderPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [showNewOrderPopup, setShowNewOrderPopup] = useState(false);
   const [incomingOrder, setIncomingOrder] = useState<any>(null);
+  const [showLegend, setShowLegend] = useState(false)
 
   // Tick per menit supaya warna baris update otomatis tanpa reload
   const [, setNowTick] = useState(0);
@@ -95,6 +130,8 @@ export default function OrderPage() {
           paymentMethod,
           totalPrice,
           createdAt,
+          isPreOrder,
+          scheduledAt,
           isarchived,
           orderItems:OrderItem (
             id,
@@ -338,7 +375,7 @@ export default function OrderPage() {
       </nav>
 
       <div className="overflow-x-auto bg-white rounded-xl shadow-md mt-4">
-        <table className="min-w-full table-auto text-center text-blue-900">
+        <table className="min-w-full table-auto text-center text-black">
           <thead className="bg-blue-100">
             <tr>
               <th className="px-2 py-2">Time Order</th>
@@ -355,9 +392,22 @@ export default function OrderPage() {
             {orders.map(order => (
               <tr
                 key={order.id}
-                className={`${getRowClass(order.createdAt)} transition-colors ${getElapsedMinutes(order.createdAt) >= 60 ? 'hover:bg-gray-900' : 'hover:bg-blue-50'}`}
+                className={`${getRowClassForOrder(order)} transition-colors`}
               >
-                <td className="py-2">{formatToWIB(order.createdAt)}</td>
+                <td className="py-2">
+                  {order.isPreOrder ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-indigo-50 border-indigo-300 text-indigo-800">
+                        PRE‑ORDER • {order.scheduledAt ? formatToWIB(order.scheduledAt) : '-'}
+                      </span>
+                      <span className="text-[11px] text-gray-500">
+                        Dipesan: {formatToWIB(order.createdAt)}
+                      </span>
+                    </div>
+                  ) : (
+                    formatToWIB(order.createdAt)
+                  )}
+                </td>
                 <td className="py-2">{order.roomNumber}</td>
                 <td className="py-2">{order.customerName}</td>
 
@@ -400,6 +450,18 @@ export default function OrderPage() {
             ))}
           </tbody>
         </table>
+        {/* ...setelah </table> */}
+        <div className="flex justify-end p-3">
+          <button
+            onClick={() => setShowLegend(true)}
+            className="inline-flex items-center gap-2 text-sm bg-gray-100 hover:bg-gray-200 text-black px-3 py-2 rounded"
+            aria-haspopup="dialog"
+            aria-expanded={showLegend}
+          >
+            ❔ Legenda warna
+          </button>
+        </div>
+
         {error && <p className="text-center text-red-600 py-4">{error}</p>}
         {orders.length === 0 && !error && (
           <p className="text-center text-blue-800 py-6">Belum ada order.</p>
@@ -500,6 +562,80 @@ export default function OrderPage() {
               >
                 Matikan bunyi & Tutup
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showLegend && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-xl p-5">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold text-blue-900">Penjelasan warna order</h3>
+              <button
+                onClick={() => setShowLegend(false)}
+                className="text-black/70 hover:text-black text-xl leading-none"
+                aria-label="Tutup"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-5 text-sm text-blue-900">
+              {/* Order biasa */}
+              <section>
+                <h4 className="font-semibold mb-2">Order biasa (bukan pre‑order)</h4>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-3">
+                    <span className="w-4 h-4 rounded border bg-green-100" />
+                    <span>waktunya memasak</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="w-4 h-4 rounded border bg-yellow-100" />
+                    <span>≥ 30 menit dari waktu orderan masuk</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="w-4 h-4 rounded border bg-red-400" />
+                    <span>≥ 60 menit setelah orderan masuk(sudah telat) </span>
+                  </li>
+                </ul>
+              </section>
+
+              {/* Pre‑order */}
+              <section>
+                <h4 className="font-semibold mb-2">Pre‑order (berdasarkan sisa waktu ke jadwal)</h4>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-3">
+                    <span className="w-4 h-4 rounded border bg-indigo-50" />
+                    <span>60 menit lagi (masih lama)</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="w-4 h-4 rounded border bg-green-100" />
+                    <span>30 menit lagi sebelum waktu tiba</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="w-4 h-4 rounded border bg-yellow-100" />
+                    <span>40 menit lagi sebelum waktu tiba</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="w-4 h-4 rounded border bg-red-400" />
+                    <span>sudah waktunya antar</span>
+                  </li>
+                </ul>
+                <p className="text-xs text-gray-500 mt-3">
+                  Catatan: Jam pada badge <b>PRE‑ORDER</b> ditampilkan dalam WIB. Warna baris mengikuti
+                  sisa waktu menuju <code>scheduledAt</code>.
+                </p>
+              </section>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowLegend(false)}
+                  className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Tutup
+                </button>
+              </div>
             </div>
           </div>
         </div>
