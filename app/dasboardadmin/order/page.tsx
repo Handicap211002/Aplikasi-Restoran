@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trash2, Printer, LogOut } from 'lucide-react';
+import { CircleCheckBig, Printer, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useRef } from 'react';
@@ -392,7 +392,7 @@ export default function OrderPage() {
             {orders.map(order => (
               <tr
                 key={order.id}
-                className={`${getRowClassForOrder(order)} transition-colors`}
+                className={`${getRowClassForOrder(order)} border-b border-black-100 transition-colors`}
               >
                 <td className="py-2">
                   {order.isPreOrder ? (
@@ -440,9 +440,9 @@ export default function OrderPage() {
                         setOrderToDelete(order.id);
                         setShowConfirm(true);
                       }}
-                      className="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded inline-flex items-center justify-center w-full sm:w-auto"
+                      className="bg-green-500 hover:bg-green-800 text-white px-3 py-1 rounded inline-flex items-center justify-center w-full sm:w-auto"
                     >
-                      <Trash2 size={16} className="mr-1" /> DELETE
+                      <CircleCheckBig size={16} className="mr-1" /> SELESAI
                     </button>
                   </div>
                 </td>
@@ -513,7 +513,7 @@ export default function OrderPage() {
       {showConfirm && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow-lg text-center space-y-4">
-            <p className="text-lg text-black font-medium">Yakin ingin menghapus order ini?</p>
+            <p className="text-lg text-black font-medium">Yakin Orderan Sudah Selesai?</p>
             <div className="flex justify-center gap-4">
               <button
                 className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded text-black"
@@ -525,7 +525,7 @@ export default function OrderPage() {
                 Tidak
               </button>
               <button
-                className="bg-red-500 hover:bg-red-700 text-white px-4 py-2 rounded"
+                className="bg-green-500 hover:bg-green-800 text-white px-4 py-2 rounded"
                 onClick={() => {
                   if (orderToDelete !== null) {
                     handleDeleteOrder(orderToDelete);
@@ -534,7 +534,7 @@ export default function OrderPage() {
                   setOrderToDelete(null);
                 }}
               >
-                Ya, Hapus
+                Selesai
               </button>
             </div>
           </div>

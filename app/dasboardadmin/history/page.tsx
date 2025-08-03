@@ -121,109 +121,137 @@ export default function HistoryPage() {
     return `${date.toLocaleString('default', { month: 'long' }).toUpperCase()} ${date.getFullYear()}`;
   };
 
-  const handleExportToExcel = async () => {
-    if (!orders.length) {
-      alert("Tidak ada data order untuk diekspor.");
-      return;
-    }
+const handleExportToExcel = async () => {
+  if (!orders.length) {
+    alert("Tidak ada data order untuk diekspor.");
+    return;
+  }
 
-    const startDate = new Date(`${selectedMonth}-01`);
-    const endDate = new Date(startDate);
-    endDate.setMonth(startDate.getMonth() + 1);
+  const startDate = new Date(`${selectedMonth}-01`);
+  const endDate = new Date(startDate);
+  endDate.setMonth(startDate.getMonth() + 1);
 
-    const groupedData: Record<string, Record<string, { quantity: number; price: number }>> = {};
+  const groupedData: Record<string, Record<string, { quantity: number; price: number }>> = {};
 
-    orders.forEach(order => {
-      if (order.status !== 'SUCCESS') return;
+  orders.forEach(order => {
+    if (order.status !== 'SUCCESS') return;
 
-      order.orderItems.forEach(item => {
-        const category = item.menuItem.category.name;
-        const menuName = item.menuItem.name;
-        const price = item.menuItem.price;
+    order.orderItems.forEach(item => {
+      const category = item.menuItem.category.name;
+      const menuName = item.menuItem.name;
+      const price = item.menuItem.price;
 
-        if (!groupedData[category]) groupedData[category] = {};
-        if (!groupedData[category][menuName]) {
-          groupedData[category][menuName] = { quantity: 0, price };
-        }
+      if (!groupedData[category]) groupedData[category] = {};
+      if (!groupedData[category][menuName]) {
+        groupedData[category][menuName] = { quantity: 0, price };
+      }
 
-        groupedData[category][menuName].quantity += item.quantity;
-      });
+      groupedData[category][menuName].quantity += item.quantity;
     });
+  });
 
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Laporan Penjualan');
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Laporan Penjualan');
 
-    // Judul
-    const title = `Laporan Penjualan ${startDate.toLocaleDateString()} s/d ${endDate.toLocaleDateString()}`;
-    worksheet.mergeCells('A1:E1');
-    const titleCell = worksheet.getCell('A1');
-    titleCell.value = title;
-    titleCell.font = { bold: true, size: 14 };
-    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-    worksheet.getRow(1).height = 24;
+  // Judul
+  const title = `Laporan Penjualan ${startDate.toLocaleDateString()} s/d ${endDate.toLocaleDateString()}`;
+  worksheet.mergeCells('A1:E1');
+  const titleCell = worksheet.getCell('A1');
+  titleCell.value = title;
+  titleCell.font = { bold: true, size: 14 };
+  titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+  worksheet.getRow(1).height = 24;
 
-    // Spasi kosong baris 2
-    worksheet.addRow([]);
+  // Spasi kosong baris 2
+  worksheet.addRow([]);
 
-    // Header
-    worksheet.columns = [
-      { key: 'no', width: 5 },
-      { key: 'menu', width: 30 },
-      { key: 'jumlah', width: 15 },
-      { key: 'harga', width: 15, style: { numFmt: '0' } },
-      { key: 'total', width: 20, style: { numFmt: '0' } },
-    ];
+  // Header
+  worksheet.columns = [
+    { key: 'no', width: 5 },
+    { key: 'menu', width: 30 },
+    { key: 'jumlah', width: 15 },
+    { key: 'harga', width: 20 },
+    { key: 'total', width: 25 },
+  ];
 
-    const headerRow = worksheet.addRow(['NO', 'MENU', 'JUMLAH LAKU', 'HARGA JUAL', 'TOTAL PENDAPATAN']);
-    headerRow.font = { bold: true };
-    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
-    headerRow.eachCell(cell => {
-      cell.border = {
+  const headerRow = worksheet.addRow(['NO', 'MENU', 'JUMLAH LAKU', 'HARGA JUAL', 'TOTAL PENDAPATAN']);
+  headerRow.font = { bold: true };
+  headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+  headerRow.eachCell(cell => {
+    cell.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+  });
+
+  // Data isi
+  let count = 1;
+  let grandTotal = 0;
+
+  for (const [category, menus] of Object.entries(groupedData)) {
+    const catRow = worksheet.addRow(['', category]);
+    const rowIndex = catRow.number;
+    worksheet.mergeCells(`B${rowIndex}:E${rowIndex}`);
+    catRow.font = { bold: true };
+    catRow.alignment = { horizontal: 'left' };
+    for (let i = 2; i <= 5; i++) {
+      catRow.getCell(i).border = {
         top: { style: 'thin' },
-        left: { style: 'thin' },
         bottom: { style: 'thin' },
-        right: { style: 'thin' },
+        left: i === 2 ? { style: 'thin' } : undefined,
+        right: i === 5 ? { style: 'thin' } : undefined,
       };
-    });
-
-    // Data isi
-    let count = 1;
-    for (const [category, menus] of Object.entries(groupedData)) {
-      const catRow = worksheet.addRow(['', category]);
-      const rowIndex = catRow.number;
-      worksheet.mergeCells(`B${rowIndex}:E${rowIndex}`);
-      catRow.font = { bold: true };
-      catRow.alignment = { horizontal: 'left' };
-      for (let i = 2; i <= 5; i++) {
-        catRow.getCell(i).border = {
-          top: { style: 'thin' },
-          bottom: { style: 'thin' },
-          left: i === 2 ? { style: 'thin' } : undefined,
-          right: i === 5 ? { style: 'thin' } : undefined,
-        };
-      }
-
-      for (const [menuName, data] of Object.entries(menus)) {
-        const total = data.quantity * data.price;
-        const row = worksheet.addRow([count++, menuName, data.quantity, data.price, total]);
-        row.alignment = { vertical: 'middle', horizontal: 'left' };
-        row.eachCell(cell => {
-          cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' },
-          };
-        });
-      }
     }
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-    saveAs(blob, `Laporan_Penjualan_${startDate.toLocaleDateString()}_sd_${endDate.toLocaleDateString()}.xlsx`);
-  };
+    for (const [menuName, data] of Object.entries(menus)) {
+      const total = data.quantity * data.price;
+      grandTotal += total;
+
+      const row = worksheet.addRow([
+        count++,
+        menuName,
+        data.quantity,
+        `Rp. ${data.price.toLocaleString('id-ID')}`,
+        `Rp. ${total.toLocaleString('id-ID')}`,
+      ]);
+
+      row.alignment = { vertical: 'middle', horizontal: 'left' };
+      row.eachCell(cell => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+    }
+  }
+
+  // Tambahkan baris kosong
+  worksheet.addRow([]);
+
+  // Total pendapatan
+  const totalRow = worksheet.addRow(['', '', '', 'TOTAL PENDAPATAN:', `Rp. ${grandTotal.toLocaleString('id-ID')}`]);
+  totalRow.font = { bold: true };
+  totalRow.alignment = { horizontal: 'right' };
+  totalRow.eachCell(cell => {
+    cell.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+  });
+
+  // Download
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  saveAs(blob, `Laporan_Penjualan_${startDate.toLocaleDateString()}_sd_${endDate.toLocaleDateString()}.xlsx`);
+};
 
 
 

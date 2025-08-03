@@ -12,17 +12,16 @@ import { PaymentMethodModal } from '../../components/PaymentMethodModal'
 import { SuccessModal } from '../../components/SuccessModal'
 import { PaymentMethod } from '@prisma/client'
 import { supabase } from '@/lib/supabaseClient'
-// Tambahkan di dekat import paling atas (opsional, untuk rapi)
+
 type OrderTypeLite = 'IN_RESTAURANT' | 'DELIVERY_ROOM' | 'TAKE_AWAY'
 type OrderData = {
   roomNumber: string
   customerName: string
   orderType: OrderTypeLite
-  paymentMethod: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE' // boleh juga pakai Prisma PaymentMethod
+  paymentMethod: 'CASH' | 'TRANSFER' | 'ROOM_CHARGE'
   isPreOrder: boolean
-  scheduledAt: string | null // ISO UTC atau null
+  scheduledAt: string | null
 }
-/** Ambil jam & menit *saat ini* di WIB (Asia/Jakarta) */
 function getWIBHourMinuteNow() {
   const parts = new Intl.DateTimeFormat('en-GB', {
     hour: '2-digit',
@@ -35,11 +34,10 @@ function getWIBHourMinuteNow() {
   return { hh, mm, total: hh * 60 + mm }
 }
 
-/** Tutup antara 21:30–07:30 WIB (07:30 sudah buka lagi) */
 function isRestaurantClosedNowWIB(): boolean {
   const { total } = getWIBHourMinuteNow()
-  const CLOSE_START = 21 * 60 + 30   // 21:30
-  const OPEN_TIME = 7 * 60 + 30    // 07:30
+  const CLOSE_START = 21 * 60 + 30   
+  const OPEN_TIME = 7 * 60 + 30    
   return total >= CLOSE_START || total < OPEN_TIME
 }
 
