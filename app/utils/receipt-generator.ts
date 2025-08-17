@@ -6,79 +6,155 @@ import timezone from 'dayjs/plugin/timezone';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// ✅ Fungsi untuk mengkonversi waktu ke WIB (Asia/Jakarta)
+// ===== Helpers waktu =====
 function formatToWIB(dateInput: Date | string): string {
   return dayjs.utc(dateInput).tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss');
 }
 
-// ✅ Fungsi untuk membuat struk
+// ====== NEW: opsi kertas & font ======
+type Paper = '58mm' | '80mm';
+type Font  = 'A' | 'B';
+
+const LINE_WIDTH: Record<Paper, Record<Font, number>> = {
+  // angka umum untuk ESC/POS: 58mm ≈ 32 (Font A) / 42 (Font B), 80mm ≈ 48 (A) / 64 (B)
+  '58mm': { A: 32, B: 42 },
+  '80mm': { A: 48, B: 64 },
+};
+
+type ReceiptOptions = {
+  paper?: Paper;  // default '80mm'
+  font?: Font;    // default 'A'
+};
+
+// ===== Helpers teks =====
+const padRight = (s: string, w: number) => (s.length >= w ? s : s + ' '.repeat(w - s.length));
+const padLeft  = (s: string, w: number) => (s.length >= w ? s : ' '.repeat(w - s.length) + s);
+
+function center(text: string, width: number) {
+  if (text.length >= width) return text;
+  const left = Math.floor((width - text.length) / 2);
+  return ' '.repeat(left) + text;
+}
+
+function wrapWords(text: string, width: number): string[] {
+  if (width <= 0) return [text];
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let line = '';
+  for (const w of words) {
+    if (!line.length) {
+      line = w;
+      continue;
+    }
+    if ((line + ' ' + w).length <= width) {
+      line += ' ' + w;
+    } else {
+      lines.push(line);
+      line = w;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [''];
+}
+
+// ===== ESC/POS helpers (opsional, agar printer pakai font yang sesuai) =====
+// ESC @ (init), ESC M n (font A/B), GS ! n (size normal)
+function escposHeader(font: Font) {
+  const ESC = '\x1B', GS = '\x1D';
+  const init = ESC + '@';
+  const setFont = ESC + 'M' + (font === 'A' ? '\x00' : '\x01'); // 0=A, 1=B
+  const sizeNormal = GS + '!' + '\x00';
+  return init + setFont + sizeNormal;
+}
+
 export function generateKikiRestaurantReceipt(
   order: Order & {
-    orderItems: (OrderItem & {
-      menuItem: {
-        name: string;
-        price: number;
-      };
-    })[];
+    orderItems: (OrderItem & { menuItem: { name: string; price: number } })[];
   },
-  cashierName: string
+  cashierName: string,
+  options: ReceiptOptions = {}
 ): string {
-  const padRight = (text: string, width: number) => text.padEnd(width, ' ');
-  const padLeft = (text: string, width: number) => text.padStart(width, ' ');
-  const divider = '='.repeat(48);
-  const subDivider = '-'.repeat(48);
-  const redLine = '='.repeat(48);
+  const paper = options.paper ?? '80mm';
+  const font  = options.font ?? 'A';
+  const lineWidth = LINE_WIDTH[paper][font];
 
-  const centerText = (text: string) => {
-    const lineWidth = 48;
-    if (text.length >= lineWidth) return text; // kalau terlalu panjang, biarkan apa adanya
-    const leftPadding = Math.floor((lineWidth - text.length) / 2);
-    return ' '.repeat(leftPadding) + text;
-  };
+  // Kolom dinamis:
+  const COL_QTY = 4;
+  const COL_TOTAL = lineWidth <= 32 ? 10 : lineWidth <= 42 ? 11 : 12; // ruang untuk "Rp 123.456"
+  const COL_GAP = 1;
+  const COL_NAME = Math.max(10, lineWidth - COL_QTY - COL_GAP - COL_TOTAL - COL_GAP);
 
-  let result = '';
-  result += centerText('KIKI BEACH ISLAND RESORT') + '\n';
-  result += centerText('Telp: +62 822-8923-0001') + '\n';
-  result += centerText('Pasir Gelam, Karas, Pulau Galang') + '\n';
-  result += centerText('Kota Batam, Kepulauan Riau 29486') + '\n';
-  result += `${divider}\n`;
-  result += `Tanggal   : ${formatToWIB(order.createdAt)}\n`;
-  result += `No. Order : #${String(order.id).padStart(5, '0')}\n`;
-  result += `Tipe Pesan: ${order.orderType.replace(/_/g, ' ')}\n`;
-  if (order.roomNumber) result += `Room No.  : ${order.roomNumber}\n`;
-  result += `Nama      : ${order.customerName}\n`;
-  result += `Kasir     : ${cashierName}\n`;
+  const divider = '='.repeat(lineWidth);
+  const subDivider = '-'.repeat(lineWidth);
 
+  const money = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
 
-  result += `${subDivider}\n`;
-  result += `Qty  Menu${' '.repeat(30)}Total\n`;
-  result += `${'-'.repeat(48)}\n`;
+  let out = '';
+  // Set font/size printer (bisa di-skip kalau RawBT mengabaikannya)
+  out += escposHeader(font);
+
+  out += center('KIKI BEACH ISLAND RESORT', lineWidth) + '\n';
+  out += center('Telp: +62 822-8923-0001', lineWidth) + '\n';
+  out += center('Pasir Gelam, Karas, Pulau Galang', lineWidth) + '\n';
+  out += center('Kota Batam, Kepulauan Riau 29486', lineWidth) + '\n';
+
+  out += divider + '\n';
+  out += `Tanggal   : ${formatToWIB(order.createdAt)}\n`;
+  out += `No. Order : #${String(order.id).padStart(5, '0')}\n`;
+  out += `Tipe Pesan: ${order.orderType.replace(/_/g, ' ')}\n`;
+  if (order.roomNumber) out += `Room No.  : ${order.roomNumber}\n`;
+  out += `Nama      : ${order.customerName}\n`;
+  out += `Kasir     : ${cashierName}\n`;
+
+  out += subDivider + '\n';
+  // header baris item
+  const headQty = padRight('Qty', COL_QTY);
+  const headMenu = padRight('Menu', COL_NAME);
+  const headTotal = padLeft('Total', COL_TOTAL);
+  out += `${headQty}${' '.repeat(COL_GAP)}${headMenu}${' '.repeat(COL_GAP)}${headTotal}\n`;
+  out += subDivider + '\n';
 
   let totalItems = 0;
+
   for (const item of order.orderItems) {
     totalItems += item.quantity;
-    const name = item.menuItem.name;
-    const price = item.price.toLocaleString('id-ID');
-    result += `${padRight(String(item.quantity), 4)} ${padRight(name, 30)} Rp ${padLeft(price, 9)}\n`;
+
+    const qtyStr = padRight(String(item.quantity), COL_QTY);
+    const priceStr = padLeft(money(item.price), COL_TOTAL);
+
+    // wrap nama menu
+    const nameLines = wrapWords(item.menuItem.name, COL_NAME);
+
+    // baris pertama (qty + name + total)
+    out += `${qtyStr}${' '.repeat(COL_GAP)}${padRight(nameLines[0], COL_NAME)}${' '.repeat(COL_GAP)}${priceStr}\n`;
+
+    // baris lanjutan untuk nama yang kepanjangan
+    for (let i = 1; i < nameLines.length; i++) {
+      out += `${' '.repeat(COL_QTY)}${' '.repeat(COL_GAP)}${padRight(nameLines[i], COL_NAME)}\n`;
+    }
+
+    // Note (dibungkus juga)
     if (item.note) {
-      result += `      Note: ${item.note}\n`;
+      const noteLines = wrapWords(`Note: ${item.note}`, COL_NAME);
+      for (const nl of noteLines) {
+        out += `${' '.repeat(COL_QTY)}${' '.repeat(COL_GAP)}${padRight(nl, COL_NAME)}\n`;
+      }
     }
   }
 
-  result += `${subDivider}\n`;
-  result += `Total Item  : ${totalItems}\n`;
-  result += `Total Harga : Rp ${order.totalPrice.toLocaleString('id-ID')}\n`;
-  result += `Metode Bayar: ${order.paymentMethod}\n`;
-  result += `Status      : ${order.status}\n`;
-  result += `${redLine}\n`;
-  result += `        Terima kasih atas kunjungannya!\n`;
-  result += `${redLine}\n`;
+  out += subDivider + '\n';
+  out += `Total Item  : ${totalItems}\n`;
+  out += `Total Harga : ${money(order.totalPrice)}\n`;
+  out += `Metode Bayar: ${order.paymentMethod}\n`;
+  out += `Status      : ${order.status}\n`;
+  out += divider + '\n';
+  out += center('Terima kasih atas kunjungannya!', lineWidth) + '\n';
+  out += divider + '\n';
 
-  // Tambahkan baris kosong agar kertas keluar cukup
-  result += '\n\n\n';
+  // feed extra lines biar kertas keluar
+  out += '\n\n\n';
+  // Full cut
+  out += '\x1D\x56\x00';
 
-  // Perintah potong kertas (ESC/POS)
-  result += '\x1D\x56\x00'; // GS V 0 - full cut
-
-  return result;
+  return out;
 }

@@ -611,11 +611,11 @@ export default function OrderPage() {
                   </li>
                   <li className="flex items-center gap-3">
                     <span className="w-4 h-4 rounded border bg-green-100" />
-                    <span>30 menit lagi sebelum waktu tiba</span>
+                    <span>45 menit lagi sebelum waktu tiba</span>
                   </li>
                   <li className="flex items-center gap-3">
                     <span className="w-4 h-4 rounded border bg-yellow-100" />
-                    <span>40 menit lagi sebelum waktu tiba</span>
+                    <span>30 menit lagi sebelum waktu tiba</span>
                   </li>
                   <li className="flex items-center gap-3">
                     <span className="w-4 h-4 rounded border bg-red-400" />

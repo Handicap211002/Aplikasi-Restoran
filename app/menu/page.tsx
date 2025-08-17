@@ -36,8 +36,8 @@ function getWIBHourMinuteNow() {
 
 function isRestaurantClosedNowWIB(): boolean {
   const { total } = getWIBHourMinuteNow()
-  const CLOSE_START = 21 * 60 + 30   
-  const OPEN_TIME = 7 * 60 + 30    
+  const CLOSE_START = 23 * 60 + 59   
+  const OPEN_TIME = 7 * 60 + 0    
   return total >= CLOSE_START || total < OPEN_TIME
 }
 
@@ -601,7 +601,7 @@ export default function MainMenuPage() {
           <div className="bg-white w-full max-w-md rounded-xl shadow-xl p-6 text-blue-900">
             <h3 className="text-xl font-bold mb-2">Restaurant closed</h3>
             <p className="text-sm mb-4">
-              Sorry, the restaurant is closed from <b>9:30 PM–7:30 AM WIB</b>.
+              Sorry, the restaurant is closed from <b>12:59 PM–7:30 AM WIB</b>.
               Please return after <b>07:30 AM WIB</b> Or <i>pre‑order</i> during operating hours.
             </p>
             <div className="flex justify-end gap-2">
