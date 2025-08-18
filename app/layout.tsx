@@ -2,15 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "KIKI BEACH RESTORAN",
@@ -19,15 +12,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-dvh overflow-x-hidden text-slate-900`}
       >
-        {children}
+        {/* Background global (gambar + overlay) */}
+        <div aria-hidden className="fixed inset-0 -z-10">
+          <div className="absolute inset-0 bg-[url('/bg.png')] bg-cover bg-center bg-fixed" />
+          <div className="absolute inset-0 bg-white/75" />
+        </div>
+
+        {/* App shell */}
+        <div className="min-h-dvh flex flex-col">{children}</div>
       </body>
     </html>
   );
