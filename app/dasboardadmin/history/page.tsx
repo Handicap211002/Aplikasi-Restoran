@@ -14,20 +14,18 @@ import type {
   OrderType as OrderMode,
   PaymentMethod,
   OrderItem,
-  Order as PrismaOrder
+  Order as PrismaOrder,
 } from '@prisma/client';
 
 type Order = PrismaOrder & {
-  orderItems: (OrderItem & {
-    menuItem: MenuItem;
-  })[];
+  orderItems: (OrderItem & { menuItem: MenuItem })[];
 };
 
 export default function HistoryPage() {
   const router = useRouter();
 
+  // ================= State =================
   const [orders, setOrders] = useState<Order[]>([]);
-  // Default ke bulan berjalan
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date();
     const y = d.getFullYear();
@@ -39,31 +37,55 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [printData, setPrintData] = useState<Order | null>(null);
+  // Print/preview
+  const [printData, setPrintData] = useState<Order | null>(null); // null = print all visible
   const [receiptText, setReceiptText] = useState('');
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [printMode, setPrintMode] = useState<'resto' | 'dapur'>('resto'); // toggle di Preview
+
   const [cashierName, setCashierName] = useState<string>('');
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // ================= Helpers =================
   const monthToRange = (ym: string) => {
     const [yStr, mStr] = ym.split('-');
-    const y = Number(yStr), m = Number(mStr);
+    const y = Number(yStr),
+      m = Number(mStr);
     const start = new Date(y, m - 1, 1);
     const end = new Date(y, m, 1); // eksklusif
     return { start, end };
   };
 
-  const monthLabel = (date: Date) => {
-    return `${date.toLocaleString('id-ID', { month: 'long' }).toUpperCase()} ${date.getFullYear()}`;
-  };
+  const monthLabel = (date: Date) =>
+    `${date.toLocaleString('id-ID', { month: 'long' }).toUpperCase()} ${date.getFullYear()}`;
 
   const selectedMonthLabel = (ym: string) => {
     const [yStr, mStr] = ym.split('-');
     const d = new Date(Number(yStr), Number(mStr) - 1, 1);
     return `${d.toLocaleString('id-ID', { month: 'long' }).toUpperCase()} ${d.getFullYear()}`;
   };
+
+  // opsi generator untuk receipt
+  function genOpts(forEscpos: boolean) {
+    return printMode === 'resto'
+      ? { paper: '58mm' as const, font: 'B' as const, escpos: forEscpos, compact: true }
+      : { paper: '80mm' as const, font: 'A' as const, escpos: forEscpos, compact: false };
+  }
+
+  // (Re)generate preview text berdasar mode + target (single/all)
+  function regenPreviewText(mode: 'resto' | 'dapur', target: Order | null) {
+    setPrintMode(mode);
+    if (target) {
+      const txt = generateKikiRestaurantReceipt(target, cashierName, genOpts(false));
+      setReceiptText(txt);
+    } else {
+      const txt = orders
+        .map((o) => generateKikiRestaurantReceipt(o, cashierName, genOpts(false)))
+        .join('\n\n\n');
+      setReceiptText(txt);
+    }
+  }
 
   // ================= Data =================
   const fetchOrders = async () => {
@@ -78,14 +100,13 @@ export default function HistoryPage() {
     }
 
     const { data, error } = await query.order('createdAt', { ascending: false });
-
     if (error) {
       console.error(error);
       return;
     }
 
     if (data) {
-      const typedOrders: Order[] = data.map((order: any) => ({
+      const typed: Order[] = data.map((order: any) => ({
         ...order,
         createdAt: new Date(order.createdAt),
         status: order.status as OrderStatus,
@@ -93,66 +114,82 @@ export default function HistoryPage() {
         paymentMethod: order.paymentMethod as PaymentMethod,
         orderItems: order.orderItems || [],
         totalOrder:
-          order.orderItems?.reduce(
-            (sum: number, item: { quantity: number }) => sum + item.quantity,
-            0
-          ) || 0
+          order.orderItems?.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0) ||
+          0,
       }));
-      setOrders(typedOrders);
+      setOrders(typed);
     }
   };
 
+  // Ambil user & set cashierName (cari di banyak kemungkinan key metadata)
   useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const u = data?.user;
+      if (!u) {
         router.push('/kasirlogin');
-      } else {
-        const user = data.session.user;
-        const displayName = user.user_metadata?.displayName || user.email || 'Kasir';
-        setCashierName(displayName);
-        setLoading(false);
+        return;
       }
-    };
-    checkSession();
+      const md = (u.user_metadata ?? {}) as Record<string, any>;
+      const idMeta = (u.identities ?? [])
+        .map((i: any) => i?.identity_data ?? {})
+        .reduce((a: any, b: any) => ({ ...a, ...b }), {});
+      const name =
+        md.full_name ??
+        md.display_name ??
+        md.displayName ??
+        md.name ??
+        idMeta.full_name ??
+        idMeta.name ??
+        (u.email ? u.email.split('@')[0] : 'Kasir');
+      setCashierName(String(name).trim() || 'Kasir');
+      setLoading(false);
+    })();
   }, [router]);
 
   useEffect(() => {
     fetchOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMonth, viewAll]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/kasirlogin');
   };
 
   // ================= Print =================
-  const handlePrintPreview = (order: Order) => {
+  function openPreview(order: Order, mode: 'resto' | 'dapur' = 'resto') {
     setPrintData(order);
-    setReceiptText(generateKikiRestaurantReceipt(order, cashierName));
+    regenPreviewText(mode, order);
     setShowPrintPreview(true);
-  };
+  }
 
   const handleConfirmPrint = () => {
     if (!receiptText) return alert('Tidak ada data untuk dicetak');
-    const encoded = encodeURIComponent(receiptText);
-    window.location.href = `rawbt:${encoded}`;
-    setShowPrintPreview(false);
+    setIsPrinting(true);
+    try {
+      const payload = printData
+        ? generateKikiRestaurantReceipt(printData, cashierName, genOpts(true))
+        : orders
+            .map((o) => generateKikiRestaurantReceipt(o, cashierName, genOpts(true)))
+            .join('\n\n\n');
+      const encoded = encodeURIComponent(payload);
+      window.location.href = `rawbt:${encoded}`;
+      setShowPrintPreview(false);
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   const handlePrintAll = () => {
-    if (!orders.length) return alert('Tidak ada data order');
-    const combinedText = orders.map(order => generateKikiRestaurantReceipt(order, cashierName)).join('\n\n\n');
-    setReceiptText(combinedText);
+    setPrintData(null); // menandakan "all"
+    regenPreviewText(printMode, null);
     setShowPrintPreview(true);
   };
 
-  const handleViewAll = () => {
-    setViewAll(true);
-  };
+  const handleViewAll = () => setViewAll(true);
 
   // ================= Delete All (by month) =================
-  // buka modal (blokir jika View All aktif)
   const openConfirmDelete = () => {
     if (viewAll) {
       alert('Matikan "VIEW ALL" dulu untuk menghapus per-bulan.');
@@ -164,39 +201,23 @@ export default function HistoryPage() {
   const deleteAllInMonth = async () => {
     setIsDeleting(true);
     try {
-      const monthToRange = (ym: string) => {
-        const [yStr, mStr] = ym.split('-');
-        const y = Number(yStr), m = Number(mStr);
-        return { start: new Date(y, m - 1, 1), end: new Date(y, m, 1) }; // end eksklusif
-      };
-      const selectedMonthLabel = (ym: string) => {
-        const [yStr, mStr] = ym.split('-');
-        const d = new Date(Number(yStr), Number(mStr) - 1, 1);
-        return `${d.toLocaleString('id-ID', { month: 'long' }).toUpperCase()} ${d.getFullYear()}`;
-      };
-
       const { start, end } = monthToRange(selectedMonth);
 
-      // 1) ambil id order yang akan dihapus
       const { data: orderIdsData, error: idsErr } = await supabase
         .from('Order')
         .select('id')
         .in('status', ['SUCCESS', 'FAILED'])
         .gte('createdAt', start.toISOString())
         .lt('createdAt', end.toISOString());
-
       if (idsErr) throw idsErr;
 
-      const orderIds = (orderIdsData || []).map(r => r.id as string);
+      const orderIds = (orderIdsData || []).map((r) => r.id as string);
       if (!orderIds.length) {
         alert(`Tidak ada order pada bulan ${selectedMonthLabel(selectedMonth)}.`);
         return;
       }
 
-      // 2) hapus item dulu (jika belum cascade)
       await supabase.from('OrderItem').delete().in('orderId', orderIds);
-
-      // 3) hapus order
       const { error: delOrderErr } = await supabase.from('Order').delete().in('id', orderIds);
       if (delOrderErr) throw delOrderErr;
 
@@ -213,35 +234,31 @@ export default function HistoryPage() {
   // ================= Export =================
   const handleExportToExcel = async () => {
     if (!orders.length) {
-      alert("Tidak ada data order untuk diekspor.");
+      alert('Tidak ada data order untuk diekspor.');
       return;
     }
 
     const { start, end } = monthToRange(selectedMonth);
+    const grouped: Record<string, Record<string, { quantity: number; price: number }>> = {};
 
-    const groupedData: Record<string, Record<string, { quantity: number; price: number }>> = {};
-
-    orders.forEach(order => {
+    orders.forEach((order) => {
       if (order.status !== 'SUCCESS') return;
-
-      order.orderItems.forEach(item => {
+      order.orderItems.forEach((item) => {
         const category = item.menuItem.category.name;
         const menuName = item.menuItem.name;
         const price = item.menuItem.price;
-
-        if (!groupedData[category]) groupedData[category] = {};
-        if (!groupedData[category][menuName]) {
-          groupedData[category][menuName] = { quantity: 0, price };
-        }
-
-        groupedData[category][menuName].quantity += item.quantity;
+        if (!grouped[category]) grouped[category] = {};
+        if (!grouped[category][menuName]) grouped[category][menuName] = { quantity: 0, price };
+        grouped[category][menuName].quantity += item.quantity;
       });
     });
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Laporan Penjualan');
 
-    const title = `Laporan Penjualan ${start.toLocaleDateString('id-ID')} s/d ${new Date(end.getTime() - 1).toLocaleDateString('id-ID')}`;
+    const title = `Laporan Penjualan ${start.toLocaleDateString('id-ID')} s/d ${new Date(
+      end.getTime() - 1
+    ).toLocaleDateString('id-ID')}`;
     worksheet.mergeCells('A1:E1');
     const titleCell = worksheet.getCell('A1');
     titleCell.value = title;
@@ -262,7 +279,7 @@ export default function HistoryPage() {
     const headerRow = worksheet.addRow(['NO', 'MENU', 'JUMLAH LAKU', 'HARGA JUAL', 'TOTAL PENDAPATAN']);
     headerRow.font = { bold: true };
     headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
-    headerRow.eachCell(cell => {
+    headerRow.eachCell((cell) => {
       cell.border = {
         top: { style: 'thin' },
         left: { style: 'thin' },
@@ -274,7 +291,7 @@ export default function HistoryPage() {
     let count = 1;
     let grandTotal = 0;
 
-    for (const [category, menus] of Object.entries(groupedData)) {
+    for (const [category, menus] of Object.entries(grouped)) {
       const catRow = worksheet.addRow(['', category]);
       const rowIndex = catRow.number;
       worksheet.mergeCells(`B${rowIndex}:E${rowIndex}`);
@@ -302,7 +319,7 @@ export default function HistoryPage() {
         ]);
 
         row.alignment = { vertical: 'middle', horizontal: 'left' };
-        row.eachCell(cell => {
+        row.eachCell((cell) => {
           cell.border = {
             top: { style: 'thin' },
             left: { style: 'thin' },
@@ -318,7 +335,7 @@ export default function HistoryPage() {
     const totalRow = worksheet.addRow(['', '', '', 'TOTAL PENDAPATAN:', `Rp. ${grandTotal.toLocaleString('id-ID')}`]);
     totalRow.font = { bold: true };
     totalRow.alignment = { horizontal: 'right' };
-    totalRow.eachCell(cell => {
+    totalRow.eachCell((cell) => {
       cell.border = {
         top: { style: 'thin' },
         left: { style: 'thin' },
@@ -339,15 +356,25 @@ export default function HistoryPage() {
   if (loading) return null;
 
   return (
-    <div className="pt-24 min-h-screen bg-cover bg-center p-4" style={{ backgroundImage: "url('/bg.png')" }}>
+    <div
+      className="pt-24 min-h-screen bg-cover bg-center p-4"
+      style={{ backgroundImage: "url('/bg.png')" }}
+    >
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white px-4 py-2 shadow-md">
         <Image src="/logo.png" alt="logo" width={90} height={50} className="hidden md:block" />
         <div className="flex gap-4 text-blue-900 font-bold text-sm sm:text-base md:text-xl">
-          <a href="/dasboardadmin/order" className="hover:border-b-4 hover:border-blue-900 pb-1">ORDER</a>
+          <a href="/dasboardadmin/order" className="hover:border-b-4 hover:border-blue-900 pb-1">
+            ORDER
+          </a>
           <a className="border-b-4 border-blue-900 pb-1">HISTORY</a>
-          <a href="/dasboardadmin/menu" className="hover:border-b-4 hover:border-blue-900 pb-1">MENU</a>
+          <a href="/dasboardadmin/menu" className="hover:border-b-4 hover:border-blue-900 pb-1">
+            MENU
+          </a>
         </div>
-        <button onClick={handleLogout} className="flex items-center bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">
+        <button
+          onClick={handleLogout}
+          className="flex items-center bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+        >
           <LogOut size={16} className="mr-1" /> LOGOUT
         </button>
       </nav>
@@ -359,7 +386,10 @@ export default function HistoryPage() {
           <input
             type="month"
             value={selectedMonth}
-            onChange={(e) => { setSelectedMonth(e.target.value); setViewAll(false); }}
+            onChange={(e) => {
+              setSelectedMonth(e.target.value);
+              setViewAll(false);
+            }}
             className="p-2 border border-blue-900 text-black rounded"
           />
         </div>
@@ -390,7 +420,7 @@ export default function HistoryPage() {
           onClick={openConfirmDelete}
           disabled={isDeleting || viewAll}
           className={`flex items-center gap-2 px-4 py-1 rounded text-white transition
-    ${viewAll ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
+            ${viewAll ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
           title={viewAll ? 'Matikan VIEW ALL untuk hapus per-bulan' : 'Hapus semua order pada bulan terpilih'}
         >
           <Trash2 size={16} /> {isDeleting ? 'MENGHAPUS…' : `HAPUS SEMUA (${selectedMonthLabel(selectedMonth)})`}
@@ -413,7 +443,7 @@ export default function HistoryPage() {
             </tr>
           </thead>
           <tbody>
-            {orders.map(order => (
+            {orders.map((order) => (
               <tr key={order.id} className="border-t border-blue-200">
                 <td className="py-2">{monthLabel(order.createdAt)}</td>
                 <td>{order.id}</td>
@@ -425,7 +455,7 @@ export default function HistoryPage() {
                 <td>{order.paymentMethod}</td>
                 <td className="space-x-2">
                   <button
-                    onClick={() => handlePrintPreview(order)}
+                    onClick={() => openPreview(order, 'resto')}
                     className="bg-blue-500 hover:bg-blue-700 text-white px-2 py-1 rounded inline-flex items-center"
                   >
                     <Printer size={14} className="mr-1" /> PRINT
@@ -435,23 +465,47 @@ export default function HistoryPage() {
             ))}
             {orders.length === 0 && (
               <tr>
-                <td colSpan={9} className="text-center py-6">No history this month</td>
+                <td colSpan={9} className="text-center py-6">
+                  No history this month
+                </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
 
+      {/* ================= Preview Modal ================= */}
       {showPrintPreview && receiptText && (
         <div className="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
             <div className="p-6">
-              <h3 className="text-xl font-bold text-blue-900 mb-4">Preview Struk</h3>
-              <div className="font-mono text-sm text-black bg-gray-50 p-4 rounded mb-4 whitespace-pre-wrap">
-                {receiptText.split('\n').map((line, i) => (
-                  <div key={i}>{line.replace(/\x1B\[[0-9;]*[mGKH]/g, '')}</div>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-blue-900">Preview Struk</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => regenPreviewText('resto', printData)}
+                    className={`px-3 py-1 rounded border ${
+                      printMode === 'resto' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'
+                    }`}
+                  >
+                    Restoran
+                  </button>
+                  <button
+                    onClick={() => regenPreviewText('dapur', printData)}
+                    className={`px-3 py-1 rounded border ${
+                      printMode === 'dapur' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'
+                    }`}
+                  >
+                    Dapur
+                  </button>
+                </div>
               </div>
+
+              {/* PREVIEW TEXT — tidak wrap */}
+              <pre className="font-mono text-[13px] leading-[1.25] text-black bg-gray-50 p-4 rounded mb-4 overflow-auto">
+{receiptText}
+              </pre>
+
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowPrintPreview(false)}
@@ -462,7 +516,7 @@ export default function HistoryPage() {
                 <button
                   onClick={handleConfirmPrint}
                   disabled={isPrinting}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-60"
                 >
                   <Printer size={16} className="mr-2 inline" /> Cetak
                 </button>
@@ -471,11 +525,12 @@ export default function HistoryPage() {
           </div>
         </div>
       )}
+
+      {/* ================= Confirm Delete Modal ================= */}
       {confirmOpen && (
         <div
           className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4"
           onClick={(e) => {
-            // klik backdrop untuk tutup
             if (e.target === e.currentTarget) setConfirmOpen(false);
           }}
         >
@@ -486,9 +541,15 @@ export default function HistoryPage() {
             </div>
 
             <div className="px-5 py-4 text-sm text-black">
-              Hapus <b>SEMUA</b> order bulan <b>{selectedMonth
-                ? new Date(selectedMonth + '-01').toLocaleString('id-ID', { month: 'long', year: 'numeric' }).toUpperCase()
-                : ''}</b>?<br />
+              Hapus <b>SEMUA</b> order bulan{' '}
+              <b>
+                {selectedMonth
+                  ? new Date(selectedMonth + '-01')
+                      .toLocaleString('id-ID', { month: 'long', year: 'numeric' })
+                      .toUpperCase()
+                  : ''}
+              </b>
+              ?<br />
               <span className="text-red-600 font-medium">Tindakan ini tidak bisa dibatalkan.</span>
             </div>
 
@@ -502,7 +563,6 @@ export default function HistoryPage() {
               </button>
               <button
                 onClick={async () => {
-                  // tutup modal lalu eksekusi hapus
                   setConfirmOpen(false);
                   await deleteAllInMonth();
                 }}
