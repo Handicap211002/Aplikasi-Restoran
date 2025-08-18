@@ -24,9 +24,6 @@ const alignCenter = () => ESC + 'a' + '\x01';
 const escposHeader = (font: Font) =>
   ESC + '@' + ESC + 'M' + (font === 'A' ? '\x00' : '\x01') + GS + '!' + '\x00';
 
-// Toggle emphasized (bold) agar 58mm lebih jelas
-const escBold = (on: boolean) => ESC + 'E' + (on ? '\x01' : '\x00');
-
 const padRight = (s: string, w: number) => (s.length >= w ? s : s + ' '.repeat(w - s.length));
 const padLeft  = (s: string, w: number) => (s.length >= w ? s : ' '.repeat(w - s.length) + s);
 const clamp    = (n: number, a: number, b: number) => Math.max(a, Math.min(n, b));
@@ -95,9 +92,6 @@ export function generateKikiRestaurantReceipt(
   let out = '';
   if (escpos) out += escposHeader(font);
 
-  // Aktifkan bold otomatis saat cetak 58mm
-  const useBold58 = escpos && paper === '58mm';
-  if (useBold58) out += escBold(true);
 
   // ===== HEADER toko =====
   const header = [
@@ -174,9 +168,6 @@ export function generateKikiRestaurantReceipt(
   out += (escpos ? 'Terima kasih atas kunjungannya!' : centerLine('Terima kasih atas kunjungannya!', lineWidth)) + '\n';
   out += strongLine + '\n';
   if (escpos) out += alignLeft();
-
-  // Matikan bold sebelum selesai agar setting printer normal lagi
-  if (useBold58) out += escBold(false);
 
   // Trim & feed/cut hanya saat CETAK
   out = out.replace(/\s+$/g, '');

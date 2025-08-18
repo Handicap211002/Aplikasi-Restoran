@@ -88,7 +88,7 @@ export default function OrderPage() {
   // ---------- opsi generator (identik dengan History) ----------
   function genOptsFor(mode: 'resto' | 'dapur', forEscpos: boolean) {
     return mode === 'resto'
-      ? { paper: '58mm' as const, font: 'B' as const, escpos: forEscpos, compact: true } // Restoran = 58mm
+      ? { paper: '58mm' as const, font: 'B' as const, escpos: forEscpos, compact: true,  scale: { w: 1, h: 2 } } // Restoran = 58mm
       : { paper: '80mm' as const, font: 'A' as const, escpos: forEscpos, compact: false }; // Dapur = 80mm
   }
   function genOpts(forEscpos: boolean) {
@@ -380,7 +380,7 @@ export default function OrderPage() {
 
       {/* ===== Preview Modal (IDENTIK History) ===== */}
       {showPrintPreview && printData && (
-        <div className="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">

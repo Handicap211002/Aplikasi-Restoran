@@ -66,11 +66,48 @@ export default function HistoryPage() {
     const d = new Date(Number(yStr), Number(mStr) - 1, 1);
     return `${d.toLocaleString('id-ID', { month: 'long' }).toUpperCase()} ${d.getFullYear()}`;
   };
+  // Tambahkan helper ini di atas (bareng helpers lain)
+  function getVisibleExportRange(orders: Order[], viewAll: boolean, selectedMonth: string) {
+    if (!orders.length) return null;
+
+    if (!viewAll) {
+      // Single month (pakai month picker)
+      const { start, end } = monthToRange(selectedMonth);
+      // end eksklusif -> tampilkan di header sebagai hari terakhir bulan tsb
+      return { start, end: new Date(end.getTime() - 1) };
+    }
+
+    // VIEW ALL: ambil min/max createdAt dari semua orders yang sedang ditampilkan
+    const times = orders.map(o => o.createdAt.getTime());
+    const min = new Date(Math.min(...times));
+    const max = new Date(Math.max(...times));
+
+    // Mulai dari tanggal 1 bulan terawal
+    const start = new Date(min.getFullYear(), min.getMonth(), 1);
+    // Sampai tanggal terakhir bulan terahir
+    const end = new Date(max.getFullYear(), max.getMonth() + 1, 0); // day 0 = last day prev month
+    return { start, end };
+  }
+
+  function buildNiceLabelForFile(start: Date, end: Date) {
+    const m = (d: Date) => d.toLocaleString('id-ID', { month: 'long' }).toUpperCase();
+    const y = (d: Date) => d.getFullYear();
+    const sameMonth = start.getMonth() === end.getMonth() && y(start) === y(end);
+    const sameYear = y(start) === y(end);
+
+    if (sameMonth) {
+      return `${m(start)}_${y(start)}`; // contoh: AGUSTUS_2025
+    }
+    if (sameYear) {
+      return `${m(start)}-${m(end)}_${y(end)}`; // contoh: JULI-AGUSTUS_2025
+    }
+    return `${m(start)}_${y(start)}-${m(end)}_${y(end)}`; // contoh: DESEMBER_2024-AGUSTUS_2025
+  }
 
   // Opsi generator berdasarkan mode
   function genOptsFor(mode: 'resto' | 'dapur', forEscpos: boolean) {
     return mode === 'resto'
-      ? { paper: '58mm' as const, font: 'B' as const, escpos: forEscpos, compact: true }  // Restoran = 58mm
+      ? { paper: '58mm' as const, font: 'B' as const, escpos: forEscpos, compact: true,  scale: { w: 1, h: 2 } }  // Restoran = 58mm
       : { paper: '80mm' as const, font: 'A' as const, escpos: forEscpos, compact: false }; // Dapur = 80mm
   }
   // Opsi berdasarkan state printMode saat ini
@@ -81,7 +118,7 @@ export default function HistoryPage() {
   // (Re)generate preview text berdasar mode + target (single/all)
   function regenPreviewText(mode: 'resto' | 'dapur', target: Order | null) {
     setPrintMode(mode); // update UI
-    const opts = genOptsFor(mode, false); // ⬅️ gunakan mode yang diklik (tidak menunggu state)
+    const opts = genOptsFor(mode, false); // gunakan mode yang diklik (tanpa menunggu state)
     if (target) {
       setReceiptText(generateKikiRestaurantReceipt(target, cashierName, opts));
     } else {
@@ -170,7 +207,7 @@ export default function HistoryPage() {
   }
 
   const handleConfirmPrint = () => {
-    if (!receiptText) return alert('Tidak ada data untuk dicetak');
+    if (!receiptText) return; // diam saja, tanpa notif
     setIsPrinting(true);
     try {
       const payload = printData
@@ -194,10 +231,7 @@ export default function HistoryPage() {
 
   // ================= Delete All (by month) =================
   const openConfirmDelete = () => {
-    if (viewAll) {
-      alert('Matikan "VIEW ALL" dulu untuk menghapus per-bulan.');
-      return;
-    }
+    if (viewAll) return; // diam saja, tombol juga sudah disabled
     setConfirmOpen(true);
   };
 
@@ -215,20 +249,15 @@ export default function HistoryPage() {
       if (idsErr) throw idsErr;
 
       const orderIds = (orderIdsData || []).map((r) => r.id as string);
-      if (!orderIds.length) {
-        alert(`Tidak ada order pada bulan ${selectedMonthLabel(selectedMonth)}.`);
-        return;
-      }
+      if (!orderIds.length) return; // tidak ada data, diam saja
 
       await supabase.from('OrderItem').delete().in('orderId', orderIds);
       const { error: delOrderErr } = await supabase.from('Order').delete().in('id', orderIds);
       if (delOrderErr) throw delOrderErr;
 
-      alert(`Berhasil menghapus ${orderIds.length} order.`);
-      fetchOrders();
-    } catch (e: any) {
-      console.error(e);
-      alert(`Gagal menghapus: ${e?.message || e}`);
+      await fetchOrders(); // refresh tabel tanpa notif
+    } catch (e) {
+      console.error(e); // log di console saja
     } finally {
       setIsDeleting(false);
     }
@@ -236,16 +265,18 @@ export default function HistoryPage() {
 
   // ================= Export =================
   const handleExportToExcel = async () => {
-    if (!orders.length) {
-      alert('Tidak ada data order untuk diekspor.');
-      return;
-    }
+    if (!orders.length) return; // diam saja bila tidak ada data
 
-    const { start, end } = monthToRange(selectedMonth);
+    // Ambil rentang sesuai tampilan saat ini (single month vs view all)
+    const range = getVisibleExportRange(orders, viewAll, selectedMonth);
+    if (!range) return;
+    const { start, end } = range;
+
+    // --- AGREGASI DATA ---
     const grouped: Record<string, Record<string, { quantity: number; price: number }>> = {};
 
     orders.forEach((order) => {
-      if (order.status !== 'SUCCESS') return;
+      if (order.status !== 'SUCCESS') return; // hanya sukses yang dihitung
       order.orderItems.forEach((item) => {
         const category = item.menuItem.category.name;
         const menuName = item.menuItem.name;
@@ -259,9 +290,8 @@ export default function HistoryPage() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Laporan Penjualan');
 
-    const title = `Laporan Penjualan ${start.toLocaleDateString('id-ID')} s/d ${new Date(
-      end.getTime() - 1
-    ).toLocaleDateString('id-ID')}`;
+    // Header judul pakai rentang tanggal terlihat (dd/mm/yyyy sesuai id-ID)
+    const title = `Laporan Penjualan ${start.toLocaleDateString('id-ID')} s/d ${end.toLocaleDateString('id-ID')}`;
     worksheet.mergeCells('A1:E1');
     const titleCell = worksheet.getCell('A1');
     titleCell.value = title;
@@ -351,7 +381,9 @@ export default function HistoryPage() {
     const blob = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
-    const nice = selectedMonthLabel(selectedMonth).replace(/\s+/g, '_');
+
+    // Nama file juga ikut rentang (contoh: JULI-AGUSTUS_2025.xlsx)
+    const nice = buildNiceLabelForFile(start, end).replace(/\s+/g, '_');
     saveAs(blob, `Laporan_Penjualan_${nice}.xlsx`);
   };
 
@@ -427,7 +459,6 @@ export default function HistoryPage() {
           disabled={isDeleting || viewAll}
           className={`flex items-center gap-2 px-4 py-1 rounded text-white transition
             ${viewAll ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
-          title={viewAll ? 'Matikan VIEW ALL untuk hapus per-bulan' : 'Hapus semua order pada bulan terpilih'}
         >
           <Trash2 size={16} /> {isDeleting ? 'MENGHAPUS…' : `HAPUS SEMUA (${selectedMonthLabel(selectedMonth)})`}
         </button>
@@ -482,7 +513,7 @@ export default function HistoryPage() {
 
       {/* ================= Preview Modal ================= */}
       {showPrintPreview && receiptText && (
-        <div className="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -544,7 +575,7 @@ export default function HistoryPage() {
       {/* ================= Confirm Delete Modal ================= */}
       {confirmOpen && (
         <div
-          className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={(e) => {
             if (e.target === e.currentTarget) setConfirmOpen(false);
           }}
