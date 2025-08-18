@@ -21,7 +21,11 @@ const ESC = '\x1B';
 const GS  = '\x1D';
 const alignLeft   = () => ESC + 'a' + '\x00';
 const alignCenter = () => ESC + 'a' + '\x01';
-const escposHeader = (font: Font) => ESC + '@' + ESC + 'M' + (font === 'A' ? '\x00' : '\x01') + GS + '!' + '\x00';
+const escposHeader = (font: Font) =>
+  ESC + '@' + ESC + 'M' + (font === 'A' ? '\x00' : '\x01') + GS + '!' + '\x00';
+
+// Toggle emphasized (bold) agar 58mm lebih jelas
+const escBold = (on: boolean) => ESC + 'E' + (on ? '\x01' : '\x00');
 
 const padRight = (s: string, w: number) => (s.length >= w ? s : s + ' '.repeat(w - s.length));
 const padLeft  = (s: string, w: number) => (s.length >= w ? s : ' '.repeat(w - s.length) + s);
@@ -41,6 +45,7 @@ function wrapWords(text: string, width: number): string[] {
   if (line) out.push(line);
   return out.length ? out : [''];
 }
+
 function centerLine(text: string, width: number) {
   const s = String(text);
   if (s.length >= width) return s;
@@ -48,11 +53,11 @@ function centerLine(text: string, width: number) {
   return ' '.repeat(left) + s;
 }
 
-type ReceiptOptions = {
+export type ReceiptOptions = {
   paper?: Paper;
   font?: Font;
-  escpos?: boolean;   // true = pakai ESC/POS align; false = preview (center pakai spasi)
-  compact?: boolean;  // true = mode 58mm Restoran (lebih hemat)
+  escpos?: boolean;   // true: kirim ESC/POS (cetakan). false: preview teks.
+  compact?: boolean;  // true: layout hemat (biasanya 58mm/Restoran)
 };
 
 export function generateKikiRestaurantReceipt(
@@ -60,30 +65,29 @@ export function generateKikiRestaurantReceipt(
   cashierName: string,
   options: ReceiptOptions = {}
 ): string {
-  const paper  = options.paper  ?? '80mm';
-  const font   = options.font   ?? 'A';
-  const escpos = options.escpos ?? false;
+  const paper   = options.paper   ?? '80mm';
+  const font    = options.font    ?? 'A';
+  const escpos  = options.escpos  ?? false;            // default aman buat preview
   const compact = options.compact ?? (paper === '58mm');
 
   const lineWidth = LINE_WIDTH[paper][font];
 
   // ===== hitung lebar kolom dinamis =====
-  const COL_QTY = compact ? 2 : 3;               // 58mm dipersingkat
+  const COL_QTY = compact ? 2 : 3;
   const maxUnit = Math.max(
     0,
     ...order.orderItems.map(i => Number((i as any).price ?? i.menuItem?.price ?? 0)),
     Number((order as any).totalPrice ?? 0)
   );
-  // Lebar kolom total disesuaikan dengan panjang angka terbesar, dibatasi rentang aman
-  const needed = money(maxUnit).length;          // e.g. "Rp 1.000.000" -> 12–14
+  const needed    = money(maxUnit).length;
   const COL_TOTAL = clamp(needed + 1, compact ? 10 : 12, compact ? 12 : 15);
-  const COL_GAP = 1;
-  const COL_NAME = Math.max(10, lineWidth - COL_QTY - COL_GAP - COL_TOTAL - COL_GAP);
+  const COL_GAP   = 1;
+  const COL_NAME  = Math.max(10, lineWidth - COL_QTY - COL_GAP - COL_TOTAL - COL_GAP);
 
   const divider    = '-'.repeat(lineWidth);
   const strongLine = '='.repeat(lineWidth);
 
-  // ===== Nama kasir rapi =====
+  // ===== Nama kasir =====
   const safeCashier = sanitize(
     cashierName?.includes('@') ? cashierName.split('@')[0] : cashierName
   ).slice(0, 40);
@@ -91,19 +95,22 @@ export function generateKikiRestaurantReceipt(
   let out = '';
   if (escpos) out += escposHeader(font);
 
-  // ===== HEADER toko (center di preview & cetak) =====
+  // Aktifkan bold otomatis saat cetak 58mm
+  const useBold58 = escpos && paper === '58mm';
+  if (useBold58) out += escBold(true);
+
+  // ===== HEADER toko =====
   const header = [
     'KIKI BEACH ISLAND RESORT',
+    'Telp: +62 822-8923-0001',
     'Pasir Gelam, Karas, Pulau Galang',
     'Kota Batam, Kepulauan Riau 29486',
   ];
-  if (!compact) header.splice(1, 0, 'Telp: +62 822-8923-0001'); // tampilkan telp hanya non-compact
-
   if (escpos) out += alignCenter();
   for (const h of header) out += (escpos ? h : centerLine(h, lineWidth)) + '\n';
   if (escpos) out += alignLeft();
 
-  // ===== Info order (label:auto wrap) =====
+  // ===== Info order =====
   const labelRow = (label: string, value: string) => {
     const left = `${label.padEnd(10)}: `;
     const w = Math.max(1, lineWidth - left.length);
@@ -114,12 +121,12 @@ export function generateKikiRestaurantReceipt(
   };
 
   out += strongLine + '\n';
-  out += labelRow('Tanggal', formatToWIB(order.createdAt));
+  out += labelRow('Tanggal',  formatToWIB(order.createdAt));
   out += labelRow('No. Order', `#${String(order.id).padStart(5, '0')}`);
-  out += labelRow('Tipe', String(order.orderType).replace(/_/g, ' '));
+  out += labelRow('Tipe',     String(order.orderType).replace(/_/g, ' '));
   if (order.roomNumber) out += labelRow('Room', String(order.roomNumber));
-  out += labelRow('Nama', sanitize(order.customerName || '-'));
-  out += labelRow('Kasir', safeCashier || 'Kasir');
+  out += labelRow('Nama',     sanitize(order.customerName || '-'));
+  out += labelRow('Kasir',    safeCashier || 'Kasir');
 
   // ===== Tabel item =====
   out += divider + '\n';
@@ -134,42 +141,46 @@ export function generateKikiRestaurantReceipt(
     totalItems += it.quantity;
     const qtyStr    = padRight(String(it.quantity), COL_QTY);
     const unitPrice = Number((it as any).price ?? it.menuItem?.price ?? 0);
-    const priceStr  = padLeft(money(unitPrice), COL_TOTAL); // sudah dipastikan muat
+    const priceStr  = padLeft(money(unitPrice), COL_TOTAL);
 
     const nameLines = wrapWords(sanitize(it.menuItem?.name || ''), COL_NAME);
 
     // baris 1: qty + nama + harga
     out += `${qtyStr}${' '.repeat(COL_GAP)}${padRight(nameLines[0], COL_NAME)}${' '.repeat(COL_GAP)}${priceStr}\n`;
-
-    // nama lanjutan
+    // lanjutan nama
     for (let i = 1; i < nameLines.length; i++) {
       out += `${' '.repeat(COL_QTY)}${' '.repeat(COL_GAP)}${padRight(nameLines[i], COL_NAME)}\n`;
     }
 
-    // Note tetap ditampilkan pada mode Restoran
+    // NOTE: tampil untuk SEMUA mode (dapur & restoran)
     const rawNote = (it as any).note ? `Note: ${sanitize((it as any).note)}` : '';
-    if (rawNote && compact) {
+    if (rawNote) {
       const noteLines = wrapWords(rawNote, COL_NAME);
       for (const nl of noteLines) {
         out += `${' '.repeat(COL_QTY)}${' '.repeat(COL_GAP)}${padRight(nl, COL_NAME)}\n`;
       }
     }
-  }
+  } // <— ini kurung tutup loop item yang tadi kurang
 
   // ===== Total =====
   out += divider + '\n';
-  out += labelRow('Item', String(totalItems));
+  out += labelRow('Item',  String(totalItems));
   out += labelRow('Total', money(Number((order as any).totalPrice || 0)));
   out += labelRow('Bayar', String(order.paymentMethod || '-'));
   out += labelRow('Status', String(order.status || '-'));
 
   if (escpos) out += alignCenter();
-  out += (escpos ? strongLine : strongLine) + '\n';
+  out += strongLine + '\n';
   out += (escpos ? 'Terima kasih atas kunjungannya!' : centerLine('Terima kasih atas kunjungannya!', lineWidth)) + '\n';
   out += strongLine + '\n';
   if (escpos) out += alignLeft();
 
-  // feed & cut
-  out += '\n\n\n' + '\x1D\x56\x00';
+  // Matikan bold sebelum selesai agar setting printer normal lagi
+  if (useBold58) out += escBold(false);
+
+  // Trim & feed/cut hanya saat CETAK
+  out = out.replace(/\s+$/g, '');
+  if (escpos) out += '\n\n' + '\x1D\x56\x00';
+
   return out;
 }

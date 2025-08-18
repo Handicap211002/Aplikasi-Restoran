@@ -42,7 +42,9 @@ export default function HistoryPage() {
   const [receiptText, setReceiptText] = useState('');
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
-  const [printMode, setPrintMode] = useState<'resto' | 'dapur'>('resto'); // toggle di Preview
+
+  // ✅ Default DAPUR (80mm). Ubah ke 'resto' kalau mau default Restoran (58mm).
+  const [printMode, setPrintMode] = useState<'resto' | 'dapur'>('dapur');
 
   const [cashierName, setCashierName] = useState<string>('');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -50,8 +52,7 @@ export default function HistoryPage() {
   // ================= Helpers =================
   const monthToRange = (ym: string) => {
     const [yStr, mStr] = ym.split('-');
-    const y = Number(yStr),
-      m = Number(mStr);
+    const y = Number(yStr), m = Number(mStr);
     const start = new Date(y, m - 1, 1);
     const end = new Date(y, m, 1); // eksklusif
     return { start, end };
@@ -66,22 +67,26 @@ export default function HistoryPage() {
     return `${d.toLocaleString('id-ID', { month: 'long' }).toUpperCase()} ${d.getFullYear()}`;
   };
 
-  // opsi generator untuk receipt
+  // Opsi generator berdasarkan mode
+  function genOptsFor(mode: 'resto' | 'dapur', forEscpos: boolean) {
+    return mode === 'resto'
+      ? { paper: '58mm' as const, font: 'B' as const, escpos: forEscpos, compact: true }  // Restoran = 58mm
+      : { paper: '80mm' as const, font: 'A' as const, escpos: forEscpos, compact: false }; // Dapur = 80mm
+  }
+  // Opsi berdasarkan state printMode saat ini
   function genOpts(forEscpos: boolean) {
-    return printMode === 'resto'
-      ? { paper: '58mm' as const, font: 'B' as const, escpos: forEscpos, compact: true }
-      : { paper: '80mm' as const, font: 'A' as const, escpos: forEscpos, compact: false };
+    return genOptsFor(printMode, forEscpos);
   }
 
   // (Re)generate preview text berdasar mode + target (single/all)
   function regenPreviewText(mode: 'resto' | 'dapur', target: Order | null) {
-    setPrintMode(mode);
+    setPrintMode(mode); // update UI
+    const opts = genOptsFor(mode, false); // ⬅️ gunakan mode yang diklik (tidak menunggu state)
     if (target) {
-      const txt = generateKikiRestaurantReceipt(target, cashierName, genOpts(false));
-      setReceiptText(txt);
+      setReceiptText(generateKikiRestaurantReceipt(target, cashierName, opts));
     } else {
       const txt = orders
-        .map((o) => generateKikiRestaurantReceipt(o, cashierName, genOpts(false)))
+        .map((o) => generateKikiRestaurantReceipt(o, cashierName, opts))
         .join('\n\n\n');
       setReceiptText(txt);
     }
@@ -121,7 +126,7 @@ export default function HistoryPage() {
     }
   };
 
-  // Ambil user & set cashierName (cari di banyak kemungkinan key metadata)
+  // Ambil user & set cashierName
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -158,7 +163,7 @@ export default function HistoryPage() {
   };
 
   // ================= Print =================
-  function openPreview(order: Order, mode: 'resto' | 'dapur' = 'resto') {
+  function openPreview(order: Order, mode: 'resto' | 'dapur' = 'dapur') {
     setPrintData(order);
     regenPreviewText(mode, order);
     setShowPrintPreview(true);
@@ -170,9 +175,7 @@ export default function HistoryPage() {
     try {
       const payload = printData
         ? generateKikiRestaurantReceipt(printData, cashierName, genOpts(true))
-        : orders
-            .map((o) => generateKikiRestaurantReceipt(o, cashierName, genOpts(true)))
-            .join('\n\n\n');
+        : orders.map((o) => generateKikiRestaurantReceipt(o, cashierName, genOpts(true))).join('\n\n\n');
       const encoded = encodeURIComponent(payload);
       window.location.href = `rawbt:${encoded}`;
       setShowPrintPreview(false);
@@ -355,6 +358,9 @@ export default function HistoryPage() {
   // ================= Render =================
   if (loading) return null;
 
+  // Lebar preview mengikuti jumlah kolom masing-masing kertas
+  const previewCols = printMode === 'resto' ? 42 : 48; // 58mm Font B = 42, 80mm Font A = 48
+
   return (
     <div
       className="pt-24 min-h-screen bg-cover bg-center p-4"
@@ -455,7 +461,7 @@ export default function HistoryPage() {
                 <td>{order.paymentMethod}</td>
                 <td className="space-x-2">
                   <button
-                    onClick={() => openPreview(order, 'resto')}
+                    onClick={() => openPreview(order, 'dapur' /* default dapur */)}
                     className="bg-blue-500 hover:bg-blue-700 text-white px-2 py-1 rounded inline-flex items-center"
                   >
                     <Printer size={14} className="mr-1" /> PRINT
@@ -482,29 +488,38 @@ export default function HistoryPage() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-blue-900">Preview Struk</h3>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => regenPreviewText('resto', printData)}
-                    className={`px-3 py-1 rounded border ${
-                      printMode === 'resto' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'
-                    }`}
-                  >
-                    Restoran
-                  </button>
+                  {/* Dapur (80mm) */}
                   <button
                     onClick={() => regenPreviewText('dapur', printData)}
-                    className={`px-3 py-1 rounded border ${
-                      printMode === 'dapur' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'
-                    }`}
+                    className={`px-3 py-1 rounded border ${printMode === 'dapur' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'
+                      }`}
                   >
                     Dapur
+                  </button>
+                  {/* Restoran (58mm) */}
+                  <button
+                    onClick={() => regenPreviewText('resto', printData)}
+                    className={`px-3 py-1 rounded border ${printMode === 'resto' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'
+                      }`}
+                  >
+                    Restoran
                   </button>
                 </div>
               </div>
 
-              {/* PREVIEW TEXT — tidak wrap */}
-              <pre className="font-mono text-[13px] leading-[1.25] text-black bg-gray-50 p-4 rounded mb-4 overflow-auto">
-{receiptText}
-              </pre>
+              {/* PREVIEW TEXT — lebar mengikuti jumlah kolom kertas */}
+              <div className="font-mono text-[13px] text-black bg-gray-50 p-4 rounded mb-4 overflow-auto">
+                <pre
+                  className="mx-auto"
+                  style={{
+                    width: `${previewCols}ch`,
+                    whiteSpace: 'pre',
+                    lineHeight: 1.25,
+                  }}
+                >
+                  {receiptText}
+                </pre>
+              </div>
 
               <div className="flex justify-end gap-3">
                 <button
@@ -545,8 +560,8 @@ export default function HistoryPage() {
               <b>
                 {selectedMonth
                   ? new Date(selectedMonth + '-01')
-                      .toLocaleString('id-ID', { month: 'long', year: 'numeric' })
-                      .toUpperCase()
+                    .toLocaleString('id-ID', { month: 'long', year: 'numeric' })
+                    .toUpperCase()
                   : ''}
               </b>
               ?<br />
