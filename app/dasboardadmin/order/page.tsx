@@ -138,21 +138,30 @@ export default function OrderPage() {
     }
   };
 
-  // ---------- actions ----------
-  const handleDeleteOrder = async (orderId: number) => {
-    try {
-      const { error: itemError } = await supabase.from('OrderItem').delete().eq('orderId', orderId);
-      if (itemError) {
-        console.error('Gagal hapus OrderItem:', itemError.message);
-        return;
-      }
-      const { error: orderError } = await supabase.from('Order').update({ isarchived: true }).eq('id', orderId);
-      if (orderError) console.error('Gagal hapus Order:', orderError.message);
-      else fetchOrders();
-    } catch (err) {
-      console.error(err);
+// ---------- actions ----------
+const handleDeleteOrder = async (orderId: number) => {
+  try {
+    // ❌ Jangan hapus detail item
+    // await supabase.from('OrderItem').delete().eq('orderId', orderId);
+
+    // ✅ Cukup arsipkan order (opsional set status ke SUCCESS)
+    const { error: orderError } = await supabase
+      .from('Order')
+      .update({ isarchived: true /* , status: 'SUCCESS' */ })
+      .eq('id', orderId);
+
+    if (orderError) {
+      console.error('Gagal mengarsipkan Order:', orderError.message);
+      return;
     }
-  };
+
+    // refresh list
+    fetchOrders();
+  } catch (err) {
+    console.error(err);
+  }
+};
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/kasirlogin');
