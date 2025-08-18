@@ -107,9 +107,10 @@ export default function HistoryPage() {
   // Opsi generator berdasarkan mode
   function genOptsFor(mode: 'resto' | 'dapur', forEscpos: boolean) {
     return mode === 'resto'
-      ? { paper: '58mm' as const, font: 'B' as const, escpos: forEscpos, compact: true,  scale: { w: 1, h: 2 } }  // Restoran = 58mm
-      : { paper: '80mm' as const, font: 'A' as const, escpos: forEscpos, compact: false }; // Dapur = 80mm
+      ? { paper: '58mm' as const, font: 'B' as const, escpos: forEscpos, compact: true, scale: { w: 1, h: 2 }, variant: 'resto' as const }
+      : { paper: '80mm' as const, font: 'A' as const, escpos: forEscpos, compact: false, variant: 'dapur' as const };
   }
+
   // Opsi berdasarkan state printMode saat ini
   function genOpts(forEscpos: boolean) {
     return genOptsFor(printMode, forEscpos);
