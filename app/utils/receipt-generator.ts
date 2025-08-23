@@ -150,7 +150,6 @@ export function generateKikiRestaurantReceipt(
 
     out += labelRow('No Order', `#${String(order.id).padStart(5, '0')}`);
     out += labelRow('Waktu', formatToWIB(order.createdAt));
-    out += labelRow('Order', safeCashier || '-'); // siapa yang input
     out += labelRow('Tipe', String(order.orderType).replace(/_/g, ' '));
     out += labelRow('Pre Order', getPreOrderText(order));
     if ((order as any).roomNumber) out += labelRow('Room', String((order as any).roomNumber));
@@ -185,7 +184,7 @@ export function generateKikiRestaurantReceipt(
 
     out += strongLine + '\n\n';
     if (escpos) out += alignCenter();
-    out += `Dicetak: ${safeCashier || '-'}` + '\n';
+    out += `Kasir: ${safeCashier || '-'}` + '\n';
     if (escpos) out += alignLeft();
 
     // selesai (DAPUR tidak ada total/payment/ucapan)

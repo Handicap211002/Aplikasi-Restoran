@@ -514,7 +514,7 @@ const handleDeleteOrder = async (orderId: number) => {
               <section>
                 <h4 className="font-semibold mb-2">Pre-order (berdasarkan sisa waktu ke jadwal)</h4>
                 <ul className="space-y-2">
-                  <li className="flex items-center gap-3"><span className="w-4 h-4 rounded border bg-indigo-50" /><span>60 menit lagi (masih lama)</span></li>
+                  <li className="flex items-center gap-3"><span className="w-4 h-4 rounded border bg-indigo-50" /><span>≥ 60 menit lagi (masih lama)</span></li>
                   <li className="flex items-center gap-3"><span className="w-4 h-4 rounded border bg-green-100" /><span>45 menit lagi sebelum waktu tiba</span></li>
                   <li className="flex items-center gap-3"><span className="w-4 h-4 rounded border bg-yellow-100" /><span>30 menit lagi sebelum waktu tiba</span></li>
                   <li className="flex items-center gap-3"><span className="w-4 h-4 rounded border bg-red-400" /><span>sudah waktunya antar</span></li>
