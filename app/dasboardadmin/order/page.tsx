@@ -1,15 +1,24 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { CircleCheckBig, Printer, LogOut } from 'lucide-react';
+import {
+  CircleCheckBig,
+  Printer,
+  LogOut,
+  Pencil,
+  Trash2,
+  Plus,
+  X,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { generateKikiRestaurantReceipt } from '../../utils/receipt-generator';
-// + NEW:
 import NewOrderPopup from '../../../components/NewOrderPopup';
 import { useNewOrderNotify } from '../../../hooks/useNewOrderNotify';
 
+// ==== KONFIG: token admin (hardcoded sesuai permintaan) ====
+const ADMIN_TOKEN = 'KIKI-ADMIN-123'; // ganti sesuai kebutuhan
 
 // ============= Utils waktu (tetap) =============
 function normalizeToUTCDate(value: string | Date) {
@@ -62,6 +71,24 @@ function getRowClassForOrder(order: any) {
   return 'bg-indigo-50';
 }
 
+// ===== tipe bantu untuk UI edit item
+type EditItem = {
+  id?: number;            // ada jika item lama
+  menuItemId: number;
+  name?: string;          // untuk tampilan
+  price?: number;         // untuk kalkulasi total
+  quantity: number;
+  note: string | null;
+  _deleted?: boolean;     // tanda dihapus di UI
+  _new?: boolean;         // tanda item baru
+};
+
+type MenuItemLite = {
+  id: number;
+  name: string;
+  price: number;
+};
+
 export default function OrderPage() {
   const router = useRouter();
 
@@ -69,36 +96,61 @@ export default function OrderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [orderToDelete, setOrderToDelete] = useState<number | null>(null);
-
-  // ===== PRINT / PREVIEW (disamakan dengan History) =====
+  // PRINT / PREVIEW
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [printData, setPrintData] = useState<any>(null);
   const [receiptText, setReceiptText] = useState('');
   const [isPrinting, setIsPrinting] = useState(false);
-
-  // Default DAPUR (80mm) – sama seperti History
   const [printMode, setPrintMode] = useState<'resto' | 'dapur'>('dapur');
+
+  // Popup legend + tick
   const [showLegend, setShowLegend] = useState(false);
   const [, setNowTick] = useState(0);
-  // ✅ ADD:
+
+  // ===== popup notifikasi reusable
   const {
-    show,           // boolean untuk buka/tutup popup
-    current,        // order yang sedang ditampilkan di popup
-    muted,          // status mute
-    needEnable,     // perlu tombol "Aktifkan Suara" (autoplay diblokir)
-    close,          // handler tutup popup + stop bunyi
-    replay,         // bunyikan lagi
-    enableSound,    // aktifkan suara (user gesture)
-    toggleMute,     // toggle mute
+    show,
+    current,
+    muted,
+    needEnable,
+    close,
+    replay,
+    enableSound,
+    toggleMute,
   } = useNewOrderNotify({
-    // penting: bedakan nama channel dari channel realtime utama kamu
     channelName: 'order-realtime-popup',
     filter: 'isarchived=eq.false',
     rateLimitMs: 2000,
     soundSrc: '/bell.mp3',
   });
+
+  // ====== AUTH (token) ======
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authAction, setAuthAction] = useState<null | 'edit' | 'delete'>(null);
+  const [authTargetOrder, setAuthTargetOrder] = useState<any>(null);
+  const [authToken, setAuthToken] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const openAuth = (action: 'edit' | 'delete', order: any) => {
+    setAuthAction(action);
+    setAuthTargetOrder(order);
+    setAuthToken('');
+    setAuthError(null);
+    setAuthOpen(true);
+  };
+
+  // ====== EDIT MODAL ======
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+
+  const [formCustomerName, setFormCustomerName] = useState('');
+  const [formRoomNumber, setFormRoomNumber] = useState('');
+  const [formOrderType, setFormOrderType] = useState<'IN_RESTAURANT' | 'DELIVERY_ROOM' | 'TAKE_AWAY'>('IN_RESTAURANT');
+  const [formPaymentMethod, setFormPaymentMethod] = useState<'CASH' | 'TRANSFER' | 'ROOM_CHARGE'>('CASH');
+  const [formIsPreOrder, setFormIsPreOrder] = useState(false);
+  const [formScheduledAtLocal, setFormScheduledAtLocal] = useState<string>(''); // local datetime string
+
+  const [editItems, setEditItems] = useState<EditItem[]>([]);
+  const [allMenus, setAllMenus] = useState<MenuItemLite[]>([]);
 
   // ---------- opsi generator (identik dengan History) ----------
   function genOptsFor(mode: 'resto' | 'dapur', forEscpos: boolean) {
@@ -106,7 +158,6 @@ export default function OrderPage() {
       ? { paper: '58mm' as const, font: 'B' as const, escpos: forEscpos, compact: true, scale: { w: 1, h: 2 }, variant: 'resto' as const }
       : { paper: '80mm' as const, font: 'A' as const, escpos: forEscpos, compact: false, variant: 'dapur' as const };
   }
-
   function genOpts(forEscpos: boolean) {
     return genOptsFor(printMode, forEscpos);
   }
@@ -131,9 +182,9 @@ export default function OrderPage() {
       const { data, error } = await supabase
         .from('Order')
         .select(`
-          id, roomNumber, customerName, orderType, paymentMethod, totalPrice, createdAt,
-          isPreOrder, scheduledAt, isarchived,
-          orderItems:OrderItem ( id, note, menuItem:MenuItem ( name ) )
+          id, roomNumber, customerName, orderType, paymentMethod, totalPrice, totalOrder, createdAt,
+          status, isPreOrder, scheduledAt, isarchived,
+          orderItems:OrderItem ( id, note, quantity, price, menuItem:MenuItem ( id, name, price ) )
         `)
         .gte('createdAt', isoStart)
         .lt('createdAt', isoEnd)
@@ -153,27 +204,213 @@ export default function OrderPage() {
     }
   };
 
-  // ---------- actions ----------
-  const handleDeleteOrder = async (orderId: number) => {
-    try {
-      // ❌ Jangan hapus detail item
-      // await supabase.from('OrderItem').delete().eq('orderId', orderId);
+  // soft delete helper
+  const softDeleteOrder = async (orderId: number) => {
+    // ubah status jadi DELETED & arsipkan
+    const { error } = await supabase
+      .from('Order')
+      .update({ status: 'DELETED' as any, isarchived: true })
+      .eq('id', orderId);
 
-      // ✅ Cukup arsipkan order (opsional set status ke SUCCESS)
-      const { error: orderError } = await supabase
+    if (error) {
+      // kemungkinan enum belum ditambah → fallback FAILED + arsip
+      console.warn('[softDeleteOrder] enum mungkin belum ada, fallback FAILED.', error);
+      await supabase.from('Order').update({ status: 'FAILED', isarchived: true }).eq('id', orderId);
+    }
+    await fetchOrders();
+  };
+
+  // buka editor: ambil data lengkap + menu list
+  const openEditorFor = async (orderId: number) => {
+    const [{ data: order, error: e1 }, { data: menus, error: e2 }] = await Promise.all([
+      supabase
         .from('Order')
-        .update({ isarchived: true /* , status: 'SUCCESS' */ })
+        .select(`
+          id, roomNumber, customerName, orderType, paymentMethod, totalPrice, totalOrder, status,
+          isPreOrder, scheduledAt,
+          orderItems:OrderItem ( id, note, quantity, price, menuItem:MenuItem ( id, name, price ) )
+        `)
+        .eq('id', orderId)
+        .single(),
+      supabase.from('MenuItem').select('id,name,price').order('name'),
+    ]);
+
+    if (e1 || e2 || !order || !menus) {
+      console.error('Gagal ambil data untuk edit', e1 || e2);
+      return;
+    }
+
+    setAllMenus(menus as MenuItemLite[]);
+
+    setFormCustomerName(order.customerName ?? '');
+    setFormRoomNumber(order.roomNumber ?? '');
+    setFormOrderType(order.orderType);
+    setFormPaymentMethod(order.paymentMethod);
+    setFormIsPreOrder(Boolean(order.isPreOrder));
+    setFormScheduledAtLocal(order.scheduledAt ? toLocalDatetimeInput(order.scheduledAt) : '');
+
+    const items: EditItem[] = (order.orderItems ?? []).map((oi: any) => ({
+      id: oi.id,
+      menuItemId: oi.menuItem?.id,
+      name: oi.menuItem?.name,
+      price: oi.menuItem?.price,
+      quantity: oi.quantity ?? 1,
+      note: oi.note ?? '',
+    }));
+    setEditItems(items);
+
+    setEditOpen(true);
+  };
+
+  // convert Date/ISO → nilai <input type="datetime-local">
+  function toLocalDatetimeInput(iso: string | Date) {
+    const d = normalizeToUTCDate(iso);
+    // tampilkan dalam zona lokal
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const mm = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mi = pad(d.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  }
+
+  // parse nilai dari input datetime-local → ISO UTC
+  function fromLocalDatetimeInput(val: string) {
+    if (!val) return null;
+    // val dianggap local time → konversi ke UTC ISO
+    const local = new Date(val);
+    return new Date(local.getTime()).toISOString();
+  }
+
+  // simpan hasil edit
+  const saveEdit = async () => {
+    if (!authTargetOrder) return;
+    setEditSaving(true);
+    try {
+      // hitung totalOrder & totalPrice berdasar item & harga menu
+      const calcItems = editItems.filter(i => !i._deleted);
+      const totalOrder = calcItems.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+      // ambil harga dari source menu (agar akurat)
+      const priceMap = new Map<number, number>(allMenus.map(m => [m.id, m.price]));
+      const totalPrice = calcItems.reduce((s, i) => s + (Number(i.quantity) || 0) * (priceMap.get(i.menuItemId) ?? i.price ?? 0), 0);
+
+      const payloadOrder = {
+        customerName: formCustomerName.trim(),
+        roomNumber: formRoomNumber.trim(),
+        orderType: formOrderType as any,
+        paymentMethod: formPaymentMethod as any,
+        isPreOrder: formIsPreOrder,
+        scheduledAt: formIsPreOrder ? fromLocalDatetimeInput(formScheduledAtLocal) : null,
+        totalOrder,
+        totalPrice,
+        status: 'SUCCESS_EDIT' as any, // ⚠️ butuh enum baru; ada fallback di bawah
+        isarchived: false,
+      };
+
+      // update order dulu
+      let upd = await supabase.from('Order').update(payloadOrder).eq('id', authTargetOrder.id);
+      if (upd.error) {
+        // fallback kalau enum belum ada
+        console.warn('[saveEdit] enum SUCCESS_EDIT belum ada → fallback SUCCESS', upd.error);
+        upd = await supabase.from('Order').update({ ...payloadOrder, status: 'SUCCESS' }).eq('id', authTargetOrder.id);
+        if (upd.error) throw upd.error;
+      }
+
+      // sinkronisasi item
+      // 1) ambil item lama agar tahu mana yang dihapus
+      const { data: curItems, error: curErr } = await supabase
+        .from('OrderItem')
+        .select('id')
+        .eq('orderId', authTargetOrder.id);
+      if (curErr) throw curErr;
+      const currentIds = new Set<number>((curItems ?? []).map((r: any) => r.id));
+
+      const toKeepOrUpdate = calcItems.filter(i => i.id);           // id ada → update
+      const toInsert = calcItems.filter(i => !i.id || i._new);      // item baru
+      const finalIds = new Set<number>(toKeepOrUpdate.map(i => i.id!));
+      const toDeleteIds = [...currentIds].filter(id => !finalIds.has(id));
+
+      // 2) delete yang dihapus
+      if (toDeleteIds.length) {
+        const { error: delErr } = await supabase.from('OrderItem').delete().in('id', toDeleteIds);
+        if (delErr) throw delErr;
+      }
+
+      // 3) update existing
+      for (const it of toKeepOrUpdate) {
+        const { error: upErr } = await supabase
+          .from('OrderItem')
+          .update({
+            menuItemId: it.menuItemId,
+            quantity: Number(it.quantity) || 1,
+            price: priceMap.get(it.menuItemId) ?? it.price ?? 0,
+            note: it.note ?? null,
+          })
+          .eq('id', it.id!);
+        if (upErr) throw upErr;
+      }
+
+      // 4) insert new
+      if (toInsert.length) {
+        const rows = toInsert.map(it => ({
+          orderId: authTargetOrder.id,
+          menuItemId: it.menuItemId,
+          quantity: Number(it.quantity) || 1,
+          price: priceMap.get(it.menuItemId) ?? it.price ?? 0,
+          note: it.note ?? null,
+        }));
+        const { error: insErr } = await supabase.from('OrderItem').insert(rows);
+        if (insErr) throw insErr;
+      }
+
+      setEditOpen(false);
+      await fetchOrders();
+    } catch (e) {
+      console.error('[saveEdit] gagal:', e);
+      alert('Gagal menyimpan perubahan.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  // aksi setelah autentikasi
+  const proceedAfterAuth = async () => {
+    if (authToken !== ADMIN_TOKEN) {
+      setAuthError('Token/Password salah.');
+      return;
+    }
+    setAuthOpen(false);
+    if (!authTargetOrder || !authAction) return;
+
+    if (authAction === 'delete') {
+      await softDeleteOrder(authTargetOrder.id);
+    } else if (authAction === 'edit') {
+      await openEditorFor(authTargetOrder.id);
+    }
+  };
+
+  const handleFinishOrder = async (orderId: number) => {
+    try {
+      const { error } = await supabase
+        .from('Order')
+        .update({
+          isarchived: true,          // arsipkan
+          status: 'SUCCESS_EDIT',    // status jadi sukses edit
+        })
         .eq('id', orderId);
 
-      if (orderError) {
-        console.error('Gagal mengarsipkan Order:', orderError.message);
+      if (error) {
+        console.error('[finish] gagal:', error.message);
+        alert('Gagal menandai selesai.');
         return;
       }
 
       // refresh list
-      fetchOrders();
+      await fetchOrders();
     } catch (err) {
-      console.error(err);
+      console.error('[finish] exception:', err);
+      alert('Gagal menandai selesai.');
     }
   };
 
@@ -228,6 +465,7 @@ export default function OrderPage() {
       const cashierName = printData.cashierName ?? 'Kasir';
       const payload = generateKikiRestaurantReceipt(printData, cashierName, genOpts(true));
       const encoded = encodeURIComponent(payload);
+      // RawBT
       window.location.href = `rawbt:${encoded}`;
       setShowPrintPreview(false);
     } finally {
@@ -256,9 +494,8 @@ export default function OrderPage() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'Order', filter: 'isarchived=eq.false' },
         () => {
-          fetchOrders(); // popup & audio sekarang diurus hook
+          fetchOrders(); // popup & audio diurus hook
         }
-
       )
       .on(
         'postgres_changes',
@@ -267,9 +504,7 @@ export default function OrderPage() {
       )
       .subscribe();
 
-    // Cleanup: jangan return Promise
     return () => {
-      // optional: juga bisa memanggil channel.unsubscribe(), tapi itu juga Promise.
       void supabase.removeChannel(channel);
     };
   }, [loading]);
@@ -281,7 +516,6 @@ export default function OrderPage() {
 
   if (loading) return <p className="text-center mt-10 text-blue-900">Memuat...</p>;
 
-  // ==== lebar preview (identik History) ====
   const previewCols = printMode === 'resto' ? 42 : 48; // 58mm Font B = 42, 80mm Font A = 48
 
   return (
@@ -334,9 +568,9 @@ export default function OrderPage() {
                 <td className="py-2">
                   <div className="flex flex-col gap-1">
                     {order.orderItems?.map(
-                      (oi: { id: number; note: string | null; menuItem?: { name?: string | null } | null }) => (
+                      (oi: any) => (
                         <span key={oi.id}>
-                          {oi.menuItem?.name ?? 'Item'} &rarr; {oi.note?.trim() || '–'}
+                          {oi.menuItem?.name ?? 'Item'} × {oi.quantity} &rarr; {oi.note?.trim() || '–'}
                         </span>
                       )
                     )}
@@ -353,12 +587,28 @@ export default function OrderPage() {
                     >
                       <Printer size={16} className="mr-1" /> PRINT
                     </button>
+
+                    {/* EDIT (butuh token) */}
                     <button
-                      onClick={() => {
-                        setOrderToDelete(order.id);
-                        setShowConfirm(true);
-                      }}
-                      className="bg-green-500 hover:bg-green-800 text-white px-3 py-1 rounded inline-flex items-center justify-center w-full sm:w-auto"
+                      onClick={() => openAuth('edit', order)}
+                      className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded inline-flex items-center justify-center w-full sm:w-auto"
+                      title="Edit order (proteksi token)"
+                    >
+                      <Pencil size={16} className="mr-1" /> EDIT
+                    </button>
+
+                    {/* DELETE (soft-delete, butuh token) */}
+                    <button
+                      onClick={() => openAuth('delete', order)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded inline-flex items-center justify-center w-full sm:w-auto"
+                      title="Delete (soft-delete → status DELETED, arsip true)"
+                    >
+                      <Trash2 size={16} className="mr-1" /> DELETE
+                    </button>
+                    <button
+                      onClick={() => handleFinishOrder(order.id)}
+                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded inline-flex items-center justify-center w-full sm:w-auto"
+                      title="Arsipkan & set status ke SUCCESS_EDIT"
                     >
                       <CircleCheckBig size={16} className="mr-1" /> SELESAI
                     </button>
@@ -395,27 +645,21 @@ export default function OrderPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => regenPreviewText('dapur', printData)}
-                    className={`px-3 py-1 rounded border ${printMode === 'dapur' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'
-                      }`}
+                    className={`px-3 py-1 rounded border ${printMode === 'dapur' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'}`}
                   >
                     Dapur
                   </button>
                   <button
                     onClick={() => regenPreviewText('resto', printData)}
-                    className={`px-3 py-1 rounded border ${printMode === 'resto' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'
-                      }`}
+                    className={`px-3 py-1 rounded border ${printMode === 'resto' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'}`}
                   >
                     Restoran
                   </button>
                 </div>
               </div>
 
-              {/* PREVIEW TEXT — sama seperti History */}
               <div className="font-mono text-[13px] text-black bg-gray-50 p-4 rounded mb-4 overflow-auto">
-                <pre
-                  className="mx-auto"
-                  style={{ width: `${previewCols}ch`, whiteSpace: 'pre', lineHeight: 1.25 }}
-                >
+                <pre className="mx-auto" style={{ width: `${previewCols}ch`, whiteSpace: 'pre', lineHeight: 1.25 }}>
                   {receiptText}
                 </pre>
               </div>
@@ -437,30 +681,195 @@ export default function OrderPage() {
         </div>
       )}
 
-      {/* Modal konfirmasi selesai */}
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg text-center space-y-4">
-            <p className="text-lg text-black font-medium">Yakin Orderan Sudah Selesai?</p>
-            <div className="flex justify-center gap-4">
-              <button
-                className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded text-black"
-                onClick={() => {
-                  setShowConfirm(false);
-                  setOrderToDelete(null);
-                }}
-              >
-                Tidak
+      {/* ===== Modal AUTH (token/password) ===== */}
+      {authOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white w-full max-w-sm rounded-xl shadow-xl p-6 text-blue-900">
+            <h3 className="text-lg font-bold mb-2">
+              {authAction === 'delete' ? 'Konfirmasi Delete (Soft-Delete)' : 'Konfirmasi Edit'}
+            </h3>
+            <p className="text-sm mb-3">Masukkan token/password admin untuk melanjutkan.</p>
+            <input
+              type="password"
+              value={authToken}
+              onChange={(e) => setAuthToken(e.target.value)}
+              placeholder="Token / Password"
+              className="w-full border rounded px-3 py-2 text-black"
+            />
+            {authError && <p className="text-red-600 text-sm mt-2">{authError}</p>}
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setAuthOpen(false)} className="px-4 py-2 rounded bg-gray-200 text-black">
+                Batal
+              </button>
+              <button onClick={proceedAfterAuth} className="px-4 py-2 rounded bg-blue-600 text-white">
+                Lanjut
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Modal EDIT ===== */}
+      {editOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+          <div className="bg-white w-full max-w-3xl rounded-xl shadow-xl p-6 text-blue-900">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xl font-bold">Edit Order</h3>
+              <button onClick={() => setEditOpen(false)} className="text-black/70 hover:text-black">
+                <X />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm">Customer Name</label>
+                <input
+                  value={formCustomerName}
+                  onChange={(e) => setFormCustomerName(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-black"
+                />
+              </div>
+              <div>
+                <label className="text-sm">Room Number</label>
+                <input
+                  value={formRoomNumber}
+                  onChange={(e) => setFormRoomNumber(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-black"
+                />
+              </div>
+              <div>
+                <label className="text-sm">Order Type</label>
+                <select
+                  value={formOrderType}
+                  onChange={(e) => setFormOrderType(e.target.value as any)}
+                  className="w-full border rounded px-3 py-2 text-black"
+                >
+                  <option value="IN_RESTAURANT">IN_RESTAURANT</option>
+                  <option value="DELIVERY_ROOM">DELIVERY_ROOM</option>
+                  <option value="TAKE_AWAY">TAKE_AWAY</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm">Payment</label>
+                <select
+                  value={formPaymentMethod}
+                  onChange={(e) => setFormPaymentMethod(e.target.value as any)}
+                  className="w-full border rounded px-3 py-2 text-black"
+                >
+                  <option value="CASH">CASH</option>
+                  <option value="TRANSFER">TRANSFER</option>
+                  <option value="ROOM_CHARGE">ROOM_CHARGE</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={formIsPreOrder}
+                    onChange={(e) => setFormIsPreOrder(e.target.checked)}
+                  />
+                  Pre-Order
+                </label>
+                {formIsPreOrder && (
+                  <div className="mt-2">
+                    <label className="text-sm block">Scheduled At</label>
+                    <input
+                      type="datetime-local"
+                      value={formScheduledAtLocal}
+                      onChange={(e) => setFormScheduledAtLocal(e.target.value)}
+                      className="w-full border rounded px-3 py-2 text-black"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <hr className="my-4" />
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold">Items</h4>
+                <button
+                  onClick={() => {
+                    const first = allMenus[0];
+                    if (!first) return;
+                    setEditItems(prev => [
+                      ...prev,
+                      { _new: true, menuItemId: first.id, name: first.name, price: first.price, quantity: 1, note: '' },
+                    ]);
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded border text-blue-900 border-blue-900 hover:bg-blue-900 hover:text-white"
+                >
+                  <Plus size={16} /> Tambah Item
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {editItems.filter(i => !i._deleted).map((it, idx) => (
+                  <div key={it.id ?? `new-${idx}`} className="grid grid-cols-12 gap-2 items-center">
+                    <div className="col-span-5">
+                      <select
+                        value={it.menuItemId}
+                        onChange={(e) => {
+                          const id = Number(e.target.value);
+                          const m = allMenus.find(mm => mm.id === id);
+                          setEditItems(prev => prev.map(x => x === it ? { ...x, menuItemId: id, name: m?.name, price: m?.price } : x));
+                        }}
+                        className="w-full border rounded px-3 py-2 text-black"
+                      >
+                        {allMenus.map(m => (
+                          <option key={m.id} value={m.id}>{m.name} — Rp.{m.price.toLocaleString('id-ID')}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="number"
+                        min={1}
+                        value={it.quantity}
+                        onChange={(e) => {
+                          const q = Math.max(1, Number(e.target.value) || 1);
+                          setEditItems(prev => prev.map(x => x === it ? { ...x, quantity: q } : x));
+                        }}
+                        className="w-full border rounded px-2 py-2 text-black text-center"
+                      />
+                    </div>
+                    <div className="col-span-4">
+                      <input
+                        value={it.note ?? ''}
+                        onChange={(e) => setEditItems(prev => prev.map(x => x === it ? { ...x, note: e.target.value } : x))}
+                        placeholder="Catatan"
+                        className="w-full border rounded px-3 py-2 text-black"
+                      />
+                    </div>
+                    <div className="col-span-1 flex justify-end">
+                      <button
+                        onClick={() => setEditItems(prev => prev.map(x => x === it ? { ...x, _deleted: true } : x))}
+                        className="px-2 py-2 rounded bg-red-500 hover:bg-red-600 text-white"
+                        title="Hapus item ini"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {editItems.filter(i => !i._deleted).length === 0 && (
+                  <p className="text-sm text-gray-600">Belum ada item. Klik “Tambah Item”.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button onClick={() => setEditOpen(false)} className="px-4 py-2 rounded bg-gray-200 text-black">
+                Batal
               </button>
               <button
-                className="bg-green-500 hover:bg-green-800 text-white px-4 py-2 rounded"
-                onClick={() => {
-                  if (orderToDelete !== null) handleDeleteOrder(orderToDelete);
-                  setShowConfirm(false);
-                  setOrderToDelete(null);
-                }}
+                onClick={saveEdit}
+                disabled={editSaving}
+                className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60"
               >
-                Selesai
+                {editSaving ? 'Menyimpan…' : 'Simpan'}
               </button>
             </div>
           </div>

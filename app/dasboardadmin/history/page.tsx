@@ -2,34 +2,92 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trash2, Printer, Eye, LogOut, AlertTriangle } from 'lucide-react';
+import { Trash2, Printer, Eye, LogOut, AlertTriangle, KeyRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import type { MenuItem } from '@/types';
 import { generateKikiRestaurantReceipt } from '../../utils/receipt-generator';
-import type {
-  OrderStatus,
-  OrderType as OrderMode,
-  PaymentMethod,
-  OrderItem,
-  Order as PrismaOrder,
-} from '@prisma/client';
 
-// ⬇️ NEW: popup notifikasi reusable
+// Popup notif reusable
 import NewOrderPopup from '../../../components/NewOrderPopup';
 import { useNewOrderNotify } from '../../../hooks/useNewOrderNotify';
 
-type Order = PrismaOrder & {
-  orderItems: (OrderItem & { menuItem: MenuItem })[];
+// ================== KONFIG TOKEN ADMIN ==================
+const ADMIN_TOKEN = 'KIKI-ADMIN-123'; // TODO: ganti sesuai kebutuhan
+
+// ================== TYPES ==================
+type OrderRow = {
+  id: number;
+  createdAt: Date;
+  customerName: string;
+  roomNumber: string | null;
+  orderType: string;
+  paymentMethod: string;
+  totalPrice: number;
+  status: string;
+  isarchived?: boolean | null;
+  orderItems: (any & { menuItem: MenuItem })[];
+  totalOrder?: number;
 };
 
+// ================== STATUS NORMALIZER ==================
+function normalizeStatus(v: any): 'SUCCESS' | 'SUCCESS_EDIT' | 'DELETED' | 'FAILED' | 'OTHER' {
+  const s = String(v ?? '').trim().toUpperCase();
+  if (s === 'SUCCESS') return 'SUCCESS';
+  if (s === 'SUCCESS_EDIT' || s === 'SUKSES_EDIT' || s === 'SUCCESS-EDIT' || s === 'SUKSESEDIT') return 'SUCCESS_EDIT';
+  if (s === 'DELETED' || s === 'DELETE' || s === 'DELATE') return 'DELETED';
+  if (s === 'FAILED') return 'FAILED';
+  return 'OTHER';
+}
+
+// ================== HELPERS WAKTU ==================
+const monthToRange = (ym: string) => {
+  const [yStr, mStr] = ym.split('-');
+  const y = Number(yStr), m = Number(mStr);
+  const start = new Date(y, m - 1, 1);
+  const end = new Date(y, m, 1); // eksklusif
+  return { start, end };
+};
+const monthLabel = (date: Date) =>
+  `${date.toLocaleString('id-ID', { month: 'long' }).toUpperCase()} ${date.getFullYear()}`;
+const selectedMonthLabel = (ym: string) => {
+  const [yStr, mStr] = ym.split('-');
+  const d = new Date(Number(yStr), Number(mStr) - 1, 1);
+  return `${d.toLocaleString('id-ID', { month: 'long' }).toUpperCase()} ${d.getFullYear()}`;
+};
+
+function getVisibleExportRange(orders: OrderRow[], viewAll: boolean, selectedMonth: string) {
+  if (!orders.length) return null;
+  if (!viewAll) {
+    const { start, end } = monthToRange(selectedMonth);
+    return { start, end: new Date(end.getTime() - 1) };
+  }
+  const times = orders.map(o => o.createdAt.getTime());
+  const min = new Date(Math.min(...times));
+  const max = new Date(Math.max(...times));
+  const start = new Date(min.getFullYear(), min.getMonth(), 1);
+  const end = new Date(max.getFullYear(), max.getMonth() + 1, 0);
+  return { start, end };
+}
+
+function buildNiceLabelForFile(start: Date, end: Date) {
+  const m = (d: Date) => d.toLocaleString('id-ID', { month: 'long' }).toUpperCase();
+  const y = (d: Date) => d.getFullYear();
+  const sameMonth = start.getMonth() === end.getMonth() && y(start) === y(end);
+  const sameYear = y(start) === y(end);
+  if (sameMonth) return `${m(start)}_${y(start)}`;
+  if (sameYear) return `${m(start)}-${m(end)}_${y(end)}`;
+  return `${m(start)}_${y(start)}-${m(end)}_${y(end)}`;
+}
+
+// ================== KOMPONEN ==================
 export default function HistoryPage() {
   const router = useRouter();
 
-  // ================= State =================
-  const [orders, setOrders] = useState<Order[]>([]);
+  // ========== STATE ==========
+  const [orders, setOrders] = useState<OrderRow[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date();
     const y = d.getFullYear();
@@ -37,117 +95,50 @@ export default function HistoryPage() {
     return `${y}-${m}`;
   });
   const [viewAll, setViewAll] = useState(false);
-
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Print/preview
-  const [printData, setPrintData] = useState<Order | null>(null); // null = print all visible
+  const [printData, setPrintData] = useState<OrderRow | null>(null); // null = print all success
   const [receiptText, setReceiptText] = useState('');
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
-
-  // ✅ Default DAPUR (80mm). Ubah ke 'resto' kalau mau default Restoran (58mm).
   const [printMode, setPrintMode] = useState<'resto' | 'dapur'>('dapur');
-
   const [cashierName, setCashierName] = useState<string>('');
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // ⬇️ NEW: Hook popup notifikasi — channel dibedakan untuk halaman History
+  // Token modal untuk hard delete
+  const [tokenOpen, setTokenOpen] = useState(false);
+  const [tokenValue, setTokenValue] = useState('');
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+
+  // Notif hook
   const {
-    show,           // boolean buka/tutup popup
-    current,        // order yang sedang ditampilkan di popup
-    muted,          // status mute
-    needEnable,     // perlu tombol "Aktifkan Suara" (autoplay diblokir)
-    close,          // handler tutup popup + stop bunyi
-    replay,         // bunyikan lagi
-    enableSound,    // aktifkan suara (user gesture)
-    toggleMute,     // toggle mute
+    show,
+    current,
+    muted,
+    needEnable,
+    close,
+    replay,
+    enableSound,
+    toggleMute,
   } = useNewOrderNotify({
     channelName: 'history-realtime-popup',
-    filter: 'isarchived=eq.false', // sama seperti halaman Order: notifikasi saat ada order baru (belum diarsip)
+    filter: 'isarchived=eq.false',
     rateLimitMs: 2000,
     soundSrc: '/bell.mp3',
   });
 
-  // ================= Helpers =================
-  const monthToRange = (ym: string) => {
-    const [yStr, mStr] = ym.split('-');
-    const y = Number(yStr), m = Number(mStr);
-    const start = new Date(y, m - 1, 1);
-    const end = new Date(y, m, 1); // eksklusif
-    return { start, end };
-  };
-
-  const monthLabel = (date: Date) =>
-    `${date.toLocaleString('id-ID', { month: 'long' }).toUpperCase()} ${date.getFullYear()}`;
-
-  const selectedMonthLabel = (ym: string) => {
-    const [yStr, mStr] = ym.split('-');
-    const d = new Date(Number(yStr), Number(mStr) - 1, 1);
-    return `${d.toLocaleString('id-ID', { month: 'long' }).toUpperCase()} ${d.getFullYear()}`;
-  };
-
-  function getVisibleExportRange(orders: Order[], viewAll: boolean, selectedMonth: string) {
-    if (!orders.length) return null;
-
-    if (!viewAll) {
-      const { start, end } = monthToRange(selectedMonth);
-      return { start, end: new Date(end.getTime() - 1) }; // tampilkan end-1 agar jadi hari terakhir bulan tsb
-    }
-
-    const times = orders.map(o => o.createdAt.getTime());
-    const min = new Date(Math.min(...times));
-    const max = new Date(Math.max(...times));
-
-    const start = new Date(min.getFullYear(), min.getMonth(), 1);
-    const end = new Date(max.getFullYear(), max.getMonth() + 1, 0); // day 0 = last day prev month
-    return { start, end };
-  }
-
-  function buildNiceLabelForFile(start: Date, end: Date) {
-    const m = (d: Date) => d.toLocaleString('id-ID', { month: 'long' }).toUpperCase();
-    const y = (d: Date) => d.getFullYear();
-    const sameMonth = start.getMonth() === end.getMonth() && y(start) === y(end);
-    const sameYear = y(start) === y(end);
-
-    if (sameMonth) return `${m(start)}_${y(start)}`;                 // AGUSTUS_2025
-    if (sameYear)  return `${m(start)}-${m(end)}_${y(end)}`;         // JULI-AGUSTUS_2025
-    return `${m(start)}_${y(start)}-${m(end)}_${y(end)}`;            // DESEMBER_2024-AGUSTUS_2025
-  }
-
-  // Opsi generator berdasarkan mode
-  function genOptsFor(mode: 'resto' | 'dapur', forEscpos: boolean) {
-    return mode === 'resto'
-      ? { paper: '58mm' as const, font: 'B' as const, escpos: forEscpos, compact: true, scale: { w: 1, h: 2 }, variant: 'resto' as const }
-      : { paper: '80mm' as const, font: 'A' as const, escpos: forEscpos, compact: false, variant: 'dapur' as const };
-  }
-
-  // Opsi berdasarkan state printMode saat ini
-  function genOpts(forEscpos: boolean) {
-    return genOptsFor(printMode, forEscpos);
-  }
-
-  // (Re)generate preview text berdasar mode + target (single/all)
-  function regenPreviewText(mode: 'resto' | 'dapur', target: Order | null) {
-    setPrintMode(mode); // update UI
-    const opts = genOptsFor(mode, false); // gunakan mode yang diklik (tanpa menunggu state)
-    if (target) {
-      setReceiptText(generateKikiRestaurantReceipt(target, cashierName, opts));
-    } else {
-      const txt = orders
-        .map((o) => generateKikiRestaurantReceipt(o, cashierName, opts))
-        .join('\n\n\n');
-      setReceiptText(txt);
-    }
-  }
-
-  // ================= Data =================
+  // ========== DATA ==========
   const fetchOrders = async () => {
     let query = supabase
       .from('Order')
-      .select(`*, orderItems:OrderItem(*, menuItem:MenuItem(*, category:Category(*)))`)
-      .in('status', ['SUCCESS', 'FAILED']);
+      .select(`
+        id, createdAt, customerName, roomNumber, totalPrice, status, orderType, paymentMethod,
+        isarchived,
+        orderItems:OrderItem(*, menuItem:MenuItem(*, category:Category(*)))
+      `)
+      .eq('isarchived', true); // hanya arsip (history)
 
     if (!viewAll) {
       const { start, end } = monthToRange(selectedMonth);
@@ -161,21 +152,19 @@ export default function HistoryPage() {
     }
 
     if (data) {
-      const typed: Order[] = data.map((order: any) => ({
+      const typed: OrderRow[] = (data as any[]).map((order) => ({
         ...order,
         createdAt: new Date(order.createdAt),
-        status: order.status as OrderStatus,
-        orderType: order.orderType as OrderMode,
-        paymentMethod: order.paymentMethod as PaymentMethod,
         orderItems: order.orderItems || [],
         totalOrder:
-          order.orderItems?.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0) || 0,
+          (order.orderItems || []).reduce((sum: number, it: any) => sum + (it.quantity ?? 0), 0),
       }));
-      setOrders(typed);
+      // guard isarchived
+      setOrders(typed.filter(o => o.isarchived === true));
     }
   };
 
-  // Ambil user & set cashierName
+  // Session & cashier
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -201,54 +190,69 @@ export default function HistoryPage() {
     })();
   }, [router]);
 
-  useEffect(() => {
-    fetchOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMonth, viewAll]);
+  useEffect(() => { fetchOrders(); /* eslint-disable-next-line */ }, [selectedMonth, viewAll]);
 
-  // ⬇️ NEW: Realtime refresh tabel History
+  // Realtime refresh saat arsip berubah
   useEffect(() => {
     if (loading) return;
-
     const ch = supabase
       .channel('history-realtime')
-      // Order baru masuk (belum diarsip) → tidak langsung muncul di History (karena status bukan SUCCESS/FAILED),
-      // tapi kita tetap refresh agar kalau filter "viewAll" atau status berubah, UI up-to-date.
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'Order', filter: 'isarchived=eq.false' },
-        () => fetchOrders()
-      )
-      // Bila ada pengarsipan / perubahan status → History kemungkinan berubah → refresh.
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'Order' },
+        { event: '*', schema: 'public', table: 'Order' },
         () => fetchOrders()
       )
       .subscribe();
-
     return () => { void supabase.removeChannel(ch); };
-  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loading]); // eslint-disable-line
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/kasirlogin');
   };
 
-  // ================= Print =================
-  function openPreview(order: Order, mode: 'resto' | 'dapur' = 'dapur') {
+  // ========== SPLIT DATA ==========
+  const successOrders = orders.filter(o => {
+    const s = normalizeStatus(o.status);
+    return s === 'SUCCESS' || s === 'SUCCESS_EDIT';
+  });
+  const deletedOrders = orders.filter(o => normalizeStatus(o.status) === 'DELETED');
+
+  // ========== PRINT ==========
+  function genOptsFor(mode: 'resto' | 'dapur', forEscpos: boolean) {
+    return mode === 'resto'
+      ? { paper: '58mm' as const, font: 'B' as const, escpos: forEscpos, compact: true, scale: { w: 1, h: 2 }, variant: 'resto' as const }
+      : { paper: '80mm' as const, font: 'A' as const, escpos: forEscpos, compact: false, variant: 'dapur' as const };
+  }
+  function genOpts(forEscpos: boolean) { return genOptsFor(printMode, forEscpos); }
+
+  function regenPreviewText(mode: 'resto' | 'dapur', target: OrderRow | null) {
+    setPrintMode(mode);
+    const opts = genOptsFor(mode, false);
+    if (target) {
+      setReceiptText(generateKikiRestaurantReceipt(target as any, cashierName, opts));
+    } else {
+      // Print ALL → hanya successOrders
+      const txt = successOrders
+        .map((o) => generateKikiRestaurantReceipt(o as any, cashierName, opts))
+        .join('\n\n\n');
+      setReceiptText(txt);
+    }
+  }
+
+  function openPreview(order: OrderRow, mode: 'resto' | 'dapur' = 'dapur') {
     setPrintData(order);
     regenPreviewText(mode, order);
     setShowPrintPreview(true);
   }
 
   const handleConfirmPrint = () => {
-    if (!receiptText) return; // diam saja, tanpa notif
+    if (!receiptText) return;
     setIsPrinting(true);
     try {
       const payload = printData
-        ? generateKikiRestaurantReceipt(printData, cashierName, genOpts(true))
-        : orders.map((o) => generateKikiRestaurantReceipt(o, cashierName, genOpts(true))).join('\n\n\n');
+        ? generateKikiRestaurantReceipt(printData as any, cashierName, genOpts(true))
+        : successOrders.map((o) => generateKikiRestaurantReceipt(o as any, cashierName, genOpts(true))).join('\n\n\n');
       const encoded = encodeURIComponent(payload);
       window.location.href = `rawbt:${encoded}`;
       setShowPrintPreview(false);
@@ -258,34 +262,33 @@ export default function HistoryPage() {
   };
 
   const handlePrintAll = () => {
-    setPrintData(null); // menandakan "all"
+    setPrintData(null);
     regenPreviewText(printMode, null);
     setShowPrintPreview(true);
   };
 
-  const handleViewAll = () => setViewAll(true);
-
-  // ================= Delete All (by month) =================
+  // ========== DELETE ALL (bulan ini, hanya arsip) – opsional ==========
   const openConfirmDelete = () => {
-    if (viewAll) return; // diam saja, tombol juga sudah disabled
+    if (viewAll) return;
     setConfirmOpen(true);
   };
-
   const deleteAllInMonth = async () => {
     setIsDeleting(true);
     try {
       const { start, end } = monthToRange(selectedMonth);
-
       const { data: orderIdsData, error: idsErr } = await supabase
         .from('Order')
-        .select('id')
-        .in('status', ['SUCCESS', 'FAILED'])
+        .select('id, isarchived')
+        .eq('isarchived', true)
         .gte('createdAt', start.toISOString())
         .lt('createdAt', end.toISOString());
       if (idsErr) throw idsErr;
 
-      const orderIds = (orderIdsData || []).map((r) => r.id as string);
-      if (!orderIds.length) return; // tidak ada data
+      const orderIds = (orderIdsData || [])
+        .filter((r: any) => r.isarchived === true)
+        .map((r: any) => r.id as number);
+
+      if (!orderIds.length) return;
 
       await supabase.from('OrderItem').delete().in('orderId', orderIds);
       const { error: delOrderErr } = await supabase.from('Order').delete().in('id', orderIds);
@@ -299,20 +302,46 @@ export default function HistoryPage() {
     }
   };
 
-  // ================= Export =================
-  const handleExportToExcel = async () => {
-    if (!orders.length) return;
+  // ========== HARD DELETE (by row) dengan TOKEN ==========
+  const requestHardDelete = (id: number) => {
+    setPendingDeleteId(id);
+    setTokenValue('');
+    setTokenOpen(true);
+  };
 
-    const range = getVisibleExportRange(orders, viewAll, selectedMonth);
+  const confirmHardDelete = async () => {
+    if (tokenValue !== ADMIN_TOKEN) {
+      alert('Token salah.');
+      return;
+    }
+    if (pendingDeleteId == null) return;
+    try {
+      // hapus detail dulu
+      await supabase.from('OrderItem').delete().eq('orderId', pendingDeleteId);
+      // hapus header
+      const { error } = await supabase.from('Order').delete().eq('id', pendingDeleteId);
+      if (error) throw error;
+      setTokenOpen(false);
+      setPendingDeleteId(null);
+      await fetchOrders();
+    } catch (e) {
+      console.error('[hardDelete] gagal:', e);
+      alert('Gagal menghapus permanen.');
+    }
+  };
+
+  // ========== EXPORT (hanya sukses & sukses edit) ==========
+  const handleExportToExcel = async () => {
+    if (!successOrders.length) return;
+
+    const range = getVisibleExportRange(successOrders, viewAll, selectedMonth);
     if (!range) return;
     const { start, end } = range;
 
-    // --- AGREGASI DATA ---
     const grouped: Record<string, Record<string, { quantity: number; price: number }>> = {};
 
-    orders.forEach((order) => {
-      if (order.status !== 'SUCCESS') return;
-      order.orderItems.forEach((item) => {
+    successOrders.forEach((order) => {
+      order.orderItems.forEach((item: any) => {
         const category = item.menuItem.category.name;
         const menuName = item.menuItem.name;
         const price = item.menuItem.price;
@@ -334,7 +363,6 @@ export default function HistoryPage() {
     worksheet.getRow(1).height = 24;
 
     worksheet.addRow([]);
-
     worksheet.columns = [
       { key: 'no', width: 5 },
       { key: 'menu', width: 30 },
@@ -420,72 +448,61 @@ export default function HistoryPage() {
     saveAs(blob, `Laporan_Penjualan_${nice}.xlsx`);
   };
 
-  // ================= Render =================
   if (loading) return null;
 
-  const previewCols = printMode === 'resto' ? 42 : 48; // 58mm Font B = 42, 80mm Font A = 48
+  const previewCols = printMode === 'resto' ? 42 : 48;
 
   return (
-    <div
-      className="pt-24 min-h-screen bg-cover bg-center p-4"
-      style={{ backgroundImage: "url('/bg.png')" }}
-    >
+    <div className="pt-24 min-h-screen bg-cover bg-center p-4" style={{ backgroundImage: "url('/bg.png')" }}>
+      {/* NAV */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white px-4 py-2 shadow-md">
         <Image src="/logo.png" alt="logo" width={90} height={50} className="hidden md:block" />
         <div className="flex gap-4 text-blue-900 font-bold text-sm sm:text-base md:text-xl">
-          <a href="/dasboardadmin/order" className="hover:border-b-4 hover:border-blue-900 pb-1">
-            ORDER
-          </a>
+          <a href="/dasboardadmin/order" className="hover:border-b-4 hover:border-blue-900 pb-1">ORDER</a>
           <a className="border-b-4 border-blue-900 pb-1">HISTORY</a>
-          <a href="/dasboardadmin/menu" className="hover:border-b-4 hover:border-blue-900 pb-1">
-            MENU
-          </a>
+          <a href="/dasboardadmin/menu" className="hover:border-b-4 hover:border-blue-900 pb-1">MENU</a>
         </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-        >
+        <button onClick={handleLogout} className="flex items-center bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">
           <LogOut size={16} className="mr-1" /> LOGOUT
         </button>
       </nav>
 
+      {/* FILTER BAR */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-4 items-center">
-        {/* PILIH BULAN/TAHUN */}
         <div className="flex items-center gap-2">
           <label className="text-blue-900 font-semibold text-sm">Bulan</label>
           <input
             type="month"
             value={selectedMonth}
-            onChange={(e) => {
-              setSelectedMonth(e.target.value);
-              setViewAll(false);
-            }}
+            onChange={(e) => { setSelectedMonth(e.target.value); setViewAll(false); }}
             className="p-2 border border-blue-900 text-black rounded"
           />
         </div>
 
         <button
-          onClick={handleViewAll}
+          onClick={() => setViewAll(true)}
           className="flex items-center gap-1 border border-blue-900 text-black px-4 py-1 rounded hover:bg-blue-900 hover:text-white transition"
         >
           <Eye size={16} /> VIEW ALL ORDER
         </button>
 
+        {/* PRINT ALL (hanya success) */}
         <button
           onClick={handlePrintAll}
           className="flex items-center gap-1 border border-blue-900 text-black px-4 py-1 rounded hover:bg-blue-900 hover:text-white transition"
         >
-          <Printer size={16} /> PRINT ALL ORDER
+          <Printer size={16} /> PRINT ALL (SUKSES)
         </button>
 
+        {/* EXPORT (hanya success) */}
         <button
           onClick={handleExportToExcel}
           className="flex items-center gap-1 border border-blue-900 text-black px-4 py-1 rounded hover:bg-blue-900 hover:text-white transition"
         >
-          EXPORT TO EXCEL
+          EXPORT TO EXCEL (SUKSES)
         </button>
 
-        {/* HAPUS SEMUA BULAN INI */}
+        {/* HAPUS SEMUA (arsip) – opsional */}
         <button
           onClick={openConfirmDelete}
           disabled={isDeleting || viewAll}
@@ -496,7 +513,9 @@ export default function HistoryPage() {
         </button>
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-xl shadow-md">
+      {/* ==================== TABEL SUKSES (+ EDIT) ==================== */}
+      <div className="overflow-x-auto bg-white rounded-xl shadow-md mb-8">
+        <div className="px-4 pt-4 text-left text-blue-900 font-bold">SUKSES & SUKSES EDIT</div>
         <table className="min-w-full table-auto text-center text-blue-900 border border-blue-200">
           <thead className="bg-blue-100 text-sm">
             <tr>
@@ -512,38 +531,85 @@ export default function HistoryPage() {
             </tr>
           </thead>
           <tbody>
-            {orders.map((order) => (
+            {successOrders.map((order) => (
               <tr key={order.id} className="border-t border-blue-200">
                 <td className="py-2">{monthLabel(order.createdAt)}</td>
                 <td>{order.id}</td>
                 <td>{order.customerName}</td>
                 <td>{order.roomNumber}</td>
                 <td>{order.orderType.replace(/_/g, ' ')}</td>
-                <td>Rp.{order.totalPrice.toLocaleString('id-ID')}</td>
-                <td>{order.status}</td>
+                <td>Rp.{(order.totalPrice ?? 0).toLocaleString('id-ID')}</td>
+                <td>{normalizeStatus(order.status)}</td>
                 <td>{order.paymentMethod}</td>
                 <td className="space-x-2">
                   <button
-                    onClick={() => openPreview(order, 'dapur' /* default dapur */)}
+                    onClick={() => openPreview(order, 'dapur')}
                     className="bg-blue-500 hover:bg-blue-700 text-white px-2 py-1 rounded inline-flex items-center"
                   >
                     <Printer size={14} className="mr-1" /> PRINT
                   </button>
+                  {/* Kalau mau boleh tambahkan hard delete juga di tabel ini:
+                  <button onClick={() => requestHardDelete(order.id)} className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded inline-flex items-center">
+                    <Trash2 size={14} className="mr-1" /> DELETE
+                  </button> */}
                 </td>
               </tr>
             ))}
-            {orders.length === 0 && (
-              <tr>
-                <td colSpan={9} className="text-center py-6">
-                  No history this month
-                </td>
-              </tr>
+            {successOrders.length === 0 && (
+              <tr><td colSpan={9} className="text-center py-6">Tidak ada data sukses di rentang ini</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* ================= Preview Modal ================= */}
+      {/* ==================== TABEL DELETED ==================== */}
+      <div className="overflow-x-auto bg-white rounded-xl shadow-md">
+        <div className="px-4 pt-4 text-left text-red-700 font-bold">DELETED (Soft)</div>
+        <table className="min-w-full table-auto text-center text-blue-900 border border-blue-200">
+          <thead className="bg-red-100 text-sm">
+            <tr>
+              <th className="px-2 py-2">DATE</th>
+              <th className="px-2 py-2">ORDER ID</th>
+              <th className="px-2 py-2">CUSTOMER</th>
+              <th className="px-2 py-2">ROOM</th>
+              <th className="px-2 py-2">ORDER TYPE</th>
+              <th className="px-2 py-2">TOTAL</th>
+              <th className="px-2 py-2">STATUS</th>
+              <th className="px-2 py-2">PAYMENT</th>
+              <th className="px-2 py-2">ACTION</th>
+            </tr>
+          </thead>
+          <tbody>
+            {deletedOrders.map((order) => (
+              <tr key={order.id} className="border-t border-blue-200">
+                <td className="py-2">{monthLabel(order.createdAt)}</td>
+                <td>{order.id}</td>
+                <td>{order.customerName}</td>
+                <td>{order.roomNumber}</td>
+                <td>{order.orderType.replace(/_/g, ' ')}</td>
+                <td>Rp.{(order.totalPrice ?? 0).toLocaleString('id-ID')}</td>
+                <td>{normalizeStatus(order.status)}</td>
+                <td>{order.paymentMethod}</td>
+                <td className="space-x-2">
+                  {/* Tidak ada PRINT untuk deleted */}
+                  <button
+                    onClick={() => requestHardDelete(order.id)}
+                    className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded inline-flex items-center"
+                    title="Hapus permanen (token)"
+                  >
+                    <Trash2 size={14} className="mr-1" /> DELETE
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {deletedOrders.length === 0 && (
+              <tr><td colSpan={9} className="text-center py-6">Tidak ada data deleted di rentang ini</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ================ Preview Modal ================ */}
       {showPrintPreview && receiptText && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
@@ -551,14 +617,12 @@ export default function HistoryPage() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-blue-900">Preview Struk</h3>
                 <div className="flex gap-2">
-                  {/* Dapur (80mm) */}
                   <button
                     onClick={() => regenPreviewText('dapur', printData)}
                     className={`px-3 py-1 rounded border ${printMode === 'dapur' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'}`}
                   >
                     Dapur
                   </button>
-                  {/* Restoran (58mm) */}
                   <button
                     onClick={() => regenPreviewText('resto', printData)}
                     className={`px-3 py-1 rounded border ${printMode === 'resto' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'}`}
@@ -568,32 +632,20 @@ export default function HistoryPage() {
                 </div>
               </div>
 
-              {/* PREVIEW TEXT — lebar mengikuti jumlah kolom kertas */}
               <div className="font-mono text-[13px] text-black bg-gray-50 p-4 rounded mb-4 overflow-auto">
                 <pre
                   className="mx-auto"
-                  style={{
-                    width: `${previewCols}ch`,
-                    whiteSpace: 'pre',
-                    lineHeight: 1.25,
-                  }}
+                  style={{ width: `${previewCols}ch`, whiteSpace: 'pre', lineHeight: 1.25 }}
                 >
                   {receiptText}
                 </pre>
               </div>
 
               <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowPrintPreview(false)}
-                  className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded text-black"
-                >
+                <button onClick={() => setShowPrintPreview(false)} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded text-black">
                   Batal
                 </button>
-                <button
-                  onClick={handleConfirmPrint}
-                  disabled={isPrinting}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-60"
-                >
+                <button onClick={handleConfirmPrint} disabled={isPrinting} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-60">
                   <Printer size={16} className="mr-2 inline" /> Cetak
                 </button>
               </div>
@@ -602,13 +654,11 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {/* ================= Confirm Delete Modal ================= */}
+      {/* ================ Confirm Delete Bulan ================ */}
       {confirmOpen && (
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setConfirmOpen(false);
-          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setConfirmOpen(false); }}
         >
           <div className="w-full max-w-md bg-white rounded-lg shadow-xl overflow-hidden">
             <div className="px-5 py-4 border-b flex items-center gap-2">
@@ -617,31 +667,18 @@ export default function HistoryPage() {
             </div>
 
             <div className="px-5 py-4 text-sm text-black">
-              Hapus <b>SEMUA</b> order bulan{' '}
-              <b>
-                {selectedMonth
-                  ? new Date(selectedMonth + '-01')
-                      .toLocaleString('id-ID', { month: 'long', year: 'numeric' })
-                      .toUpperCase()
-                  : ''}
-              </b>
-              ?<br />
+              Hapus <b>SEMUA</b> arsip bulan{' '}
+              <b>{selectedMonth ? new Date(selectedMonth + '-01').toLocaleString('id-ID', { month: 'long', year: 'numeric' }).toUpperCase() : ''}</b>?
+              <br />
               <span className="text-red-600 font-medium">Tindakan ini tidak bisa dibatalkan.</span>
             </div>
 
             <div className="px-5 py-4 border-t flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmOpen(false)}
-                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-black"
-                disabled={isDeleting}
-              >
+              <button onClick={() => setConfirmOpen(false)} className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-black" disabled={isDeleting}>
                 Batal
               </button>
               <button
-                onClick={async () => {
-                  setConfirmOpen(false);
-                  await deleteAllInMonth();
-                }}
+                onClick={async () => { setConfirmOpen(false); await deleteAllInMonth(); }}
                 className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white disabled:opacity-60"
                 disabled={isDeleting}
               >
@@ -652,7 +689,34 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {/* ⬇️ NEW: Popup notifikasi di halaman History */}
+      {/* ================ Token Modal (Hard Delete) ================ */}
+      {tokenOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white w-full max-w-sm rounded-xl shadow-xl p-6 text-blue-900">
+            <div className="flex items-center gap-2 mb-4">
+              <KeyRound />
+              <h3 className="text-lg font-semibold">Masukkan Token Admin</h3>
+            </div>
+            <input
+              type="password"
+              value={tokenValue}
+              onChange={(e) => setTokenValue(e.target.value)}
+              placeholder="Token"
+              className="w-full border rounded p-2 text-black mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setTokenOpen(false)} className="px-4 py-2 rounded bg-gray-200 text-black">
+                Batal
+              </button>
+              <button onClick={confirmHardDelete} className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white">
+                Hapus Permanen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================ Popup Notifikasi ================ */}
       <NewOrderPopup
         open={show}
         customerName={current?.customerName}
