@@ -17,6 +17,10 @@ import type {
   Order as PrismaOrder,
 } from '@prisma/client';
 
+// ⬇️ NEW: popup notifikasi reusable
+import NewOrderPopup from '../../../components/NewOrderPopup';
+import { useNewOrderNotify } from '../../../hooks/useNewOrderNotify';
+
 type Order = PrismaOrder & {
   orderItems: (OrderItem & { menuItem: MenuItem })[];
 };
@@ -49,6 +53,23 @@ export default function HistoryPage() {
   const [cashierName, setCashierName] = useState<string>('');
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  // ⬇️ NEW: Hook popup notifikasi — channel dibedakan untuk halaman History
+  const {
+    show,           // boolean buka/tutup popup
+    current,        // order yang sedang ditampilkan di popup
+    muted,          // status mute
+    needEnable,     // perlu tombol "Aktifkan Suara" (autoplay diblokir)
+    close,          // handler tutup popup + stop bunyi
+    replay,         // bunyikan lagi
+    enableSound,    // aktifkan suara (user gesture)
+    toggleMute,     // toggle mute
+  } = useNewOrderNotify({
+    channelName: 'history-realtime-popup',
+    filter: 'isarchived=eq.false', // sama seperti halaman Order: notifikasi saat ada order baru (belum diarsip)
+    rateLimitMs: 2000,
+    soundSrc: '/bell.mp3',
+  });
+
   // ================= Helpers =================
   const monthToRange = (ym: string) => {
     const [yStr, mStr] = ym.split('-');
@@ -66,25 +87,20 @@ export default function HistoryPage() {
     const d = new Date(Number(yStr), Number(mStr) - 1, 1);
     return `${d.toLocaleString('id-ID', { month: 'long' }).toUpperCase()} ${d.getFullYear()}`;
   };
-  // Tambahkan helper ini di atas (bareng helpers lain)
+
   function getVisibleExportRange(orders: Order[], viewAll: boolean, selectedMonth: string) {
     if (!orders.length) return null;
 
     if (!viewAll) {
-      // Single month (pakai month picker)
       const { start, end } = monthToRange(selectedMonth);
-      // end eksklusif -> tampilkan di header sebagai hari terakhir bulan tsb
-      return { start, end: new Date(end.getTime() - 1) };
+      return { start, end: new Date(end.getTime() - 1) }; // tampilkan end-1 agar jadi hari terakhir bulan tsb
     }
 
-    // VIEW ALL: ambil min/max createdAt dari semua orders yang sedang ditampilkan
     const times = orders.map(o => o.createdAt.getTime());
     const min = new Date(Math.min(...times));
     const max = new Date(Math.max(...times));
 
-    // Mulai dari tanggal 1 bulan terawal
     const start = new Date(min.getFullYear(), min.getMonth(), 1);
-    // Sampai tanggal terakhir bulan terahir
     const end = new Date(max.getFullYear(), max.getMonth() + 1, 0); // day 0 = last day prev month
     return { start, end };
   }
@@ -95,13 +111,9 @@ export default function HistoryPage() {
     const sameMonth = start.getMonth() === end.getMonth() && y(start) === y(end);
     const sameYear = y(start) === y(end);
 
-    if (sameMonth) {
-      return `${m(start)}_${y(start)}`; // contoh: AGUSTUS_2025
-    }
-    if (sameYear) {
-      return `${m(start)}-${m(end)}_${y(end)}`; // contoh: JULI-AGUSTUS_2025
-    }
-    return `${m(start)}_${y(start)}-${m(end)}_${y(end)}`; // contoh: DESEMBER_2024-AGUSTUS_2025
+    if (sameMonth) return `${m(start)}_${y(start)}`;                 // AGUSTUS_2025
+    if (sameYear)  return `${m(start)}-${m(end)}_${y(end)}`;         // JULI-AGUSTUS_2025
+    return `${m(start)}_${y(start)}-${m(end)}_${y(end)}`;            // DESEMBER_2024-AGUSTUS_2025
   }
 
   // Opsi generator berdasarkan mode
@@ -157,8 +169,7 @@ export default function HistoryPage() {
         paymentMethod: order.paymentMethod as PaymentMethod,
         orderItems: order.orderItems || [],
         totalOrder:
-          order.orderItems?.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0) ||
-          0,
+          order.orderItems?.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0) || 0,
       }));
       setOrders(typed);
     }
@@ -194,6 +205,30 @@ export default function HistoryPage() {
     fetchOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMonth, viewAll]);
+
+  // ⬇️ NEW: Realtime refresh tabel History
+  useEffect(() => {
+    if (loading) return;
+
+    const ch = supabase
+      .channel('history-realtime')
+      // Order baru masuk (belum diarsip) → tidak langsung muncul di History (karena status bukan SUCCESS/FAILED),
+      // tapi kita tetap refresh agar kalau filter "viewAll" atau status berubah, UI up-to-date.
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'Order', filter: 'isarchived=eq.false' },
+        () => fetchOrders()
+      )
+      // Bila ada pengarsipan / perubahan status → History kemungkinan berubah → refresh.
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'Order' },
+        () => fetchOrders()
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(ch); };
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -250,15 +285,15 @@ export default function HistoryPage() {
       if (idsErr) throw idsErr;
 
       const orderIds = (orderIdsData || []).map((r) => r.id as string);
-      if (!orderIds.length) return; // tidak ada data, diam saja
+      if (!orderIds.length) return; // tidak ada data
 
       await supabase.from('OrderItem').delete().in('orderId', orderIds);
       const { error: delOrderErr } = await supabase.from('Order').delete().in('id', orderIds);
       if (delOrderErr) throw delOrderErr;
 
-      await fetchOrders(); // refresh tabel tanpa notif
+      await fetchOrders();
     } catch (e) {
-      console.error(e); // log di console saja
+      console.error(e);
     } finally {
       setIsDeleting(false);
     }
@@ -266,9 +301,8 @@ export default function HistoryPage() {
 
   // ================= Export =================
   const handleExportToExcel = async () => {
-    if (!orders.length) return; // diam saja bila tidak ada data
+    if (!orders.length) return;
 
-    // Ambil rentang sesuai tampilan saat ini (single month vs view all)
     const range = getVisibleExportRange(orders, viewAll, selectedMonth);
     if (!range) return;
     const { start, end } = range;
@@ -277,7 +311,7 @@ export default function HistoryPage() {
     const grouped: Record<string, Record<string, { quantity: number; price: number }>> = {};
 
     orders.forEach((order) => {
-      if (order.status !== 'SUCCESS') return; // hanya sukses yang dihitung
+      if (order.status !== 'SUCCESS') return;
       order.orderItems.forEach((item) => {
         const category = item.menuItem.category.name;
         const menuName = item.menuItem.name;
@@ -291,7 +325,6 @@ export default function HistoryPage() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Laporan Penjualan');
 
-    // Header judul pakai rentang tanggal terlihat (dd/mm/yyyy sesuai id-ID)
     const title = `Laporan Penjualan ${start.toLocaleDateString('id-ID')} s/d ${end.toLocaleDateString('id-ID')}`;
     worksheet.mergeCells('A1:E1');
     const titleCell = worksheet.getCell('A1');
@@ -383,7 +416,6 @@ export default function HistoryPage() {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
 
-    // Nama file juga ikut rentang (contoh: JULI-AGUSTUS_2025.xlsx)
     const nice = buildNiceLabelForFile(start, end).replace(/\s+/g, '_');
     saveAs(blob, `Laporan_Penjualan_${nice}.xlsx`);
   };
@@ -391,7 +423,6 @@ export default function HistoryPage() {
   // ================= Render =================
   if (loading) return null;
 
-  // Lebar preview mengikuti jumlah kolom masing-masing kertas
   const previewCols = printMode === 'resto' ? 42 : 48; // 58mm Font B = 42, 80mm Font A = 48
 
   return (
@@ -523,16 +554,14 @@ export default function HistoryPage() {
                   {/* Dapur (80mm) */}
                   <button
                     onClick={() => regenPreviewText('dapur', printData)}
-                    className={`px-3 py-1 rounded border ${printMode === 'dapur' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'
-                      }`}
+                    className={`px-3 py-1 rounded border ${printMode === 'dapur' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'}`}
                   >
                     Dapur
                   </button>
                   {/* Restoran (58mm) */}
                   <button
                     onClick={() => regenPreviewText('resto', printData)}
-                    className={`px-3 py-1 rounded border ${printMode === 'resto' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'
-                      }`}
+                    className={`px-3 py-1 rounded border ${printMode === 'resto' ? 'bg-blue-600 text-white' : 'bg-white text-blue-900'}`}
                   >
                     Restoran
                   </button>
@@ -592,8 +621,8 @@ export default function HistoryPage() {
               <b>
                 {selectedMonth
                   ? new Date(selectedMonth + '-01')
-                    .toLocaleString('id-ID', { month: 'long', year: 'numeric' })
-                    .toUpperCase()
+                      .toLocaleString('id-ID', { month: 'long', year: 'numeric' })
+                      .toUpperCase()
                   : ''}
               </b>
               ?<br />
@@ -622,6 +651,19 @@ export default function HistoryPage() {
           </div>
         </div>
       )}
+
+      {/* ⬇️ NEW: Popup notifikasi di halaman History */}
+      <NewOrderPopup
+        open={show}
+        customerName={current?.customerName}
+        roomNumber={current?.roomNumber}
+        onClose={close}
+        onReplay={replay}
+        onEnableSound={enableSound}
+        showEnableSound={needEnable}
+        muted={muted}
+        onToggleMute={toggleMute}
+      />
     </div>
   );
 }

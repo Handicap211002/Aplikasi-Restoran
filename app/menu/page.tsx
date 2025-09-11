@@ -36,8 +36,8 @@ function getWIBHourMinuteNow() {
 
 function isRestaurantClosedNowWIB(): boolean {
   const { total } = getWIBHourMinuteNow()
-  const CLOSE_START = 23 * 60 + 59   
-  const OPEN_TIME = 7 * 60 + 0    
+  const CLOSE_START = 23 * 60 + 59
+  const OPEN_TIME = 7 * 60 + 0
   return total >= CLOSE_START || total < OPEN_TIME
 }
 
@@ -386,7 +386,6 @@ export default function MainMenuPage() {
         alt="Background"
         fill
         className="object-cover -z-10"
-        priority
       />
       <div className="absolute inset-0 bg-white/70 z-0" />
       <div className="z-50">
@@ -419,11 +418,12 @@ export default function MainMenuPage() {
                   }`}
               >
                 {filteredMenuItems.length > 0 ? (
-                  filteredMenuItems.map((item) => (
+                  filteredMenuItems.map((item, idx) => (
                     <MenuCard
                       key={item.id}
                       item={item}
                       onAdd={() => openModal(item)}
+                      isLcp={idx === 0} // <-- gambar pertama di hasil search = kandidat LCP
                     />
                   ))
                 ) : (
@@ -518,11 +518,12 @@ export default function MainMenuPage() {
                     : 'xl:grid-cols-6 2xl:grid-cols-7'
                     }`}
                 >
-                  {menuByCategory[categoryName]?.map((item) => (
+                  {menuByCategory[categoryName]?.map((item, idx) => (
                     <MenuCard
                       key={item.id}
                       item={item}
                       onAdd={() => openModal(item)}
+                      isLcp={categoryName === 'ALL SEAFOOD' && idx === 0} // <-- hanya kartu pertama di kategori pertama
                     />
                   ))}
                 </div>

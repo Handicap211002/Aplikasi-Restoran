@@ -6,6 +6,10 @@ import { CircleCheckBig, Printer, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { generateKikiRestaurantReceipt } from '../../utils/receipt-generator';
+// + NEW:
+import NewOrderPopup from '../../../components/NewOrderPopup';
+import { useNewOrderNotify } from '../../../hooks/useNewOrderNotify';
+
 
 // ============= Utils waktu (tetap) =============
 function normalizeToUTCDate(value: string | Date) {
@@ -76,14 +80,25 @@ export default function OrderPage() {
 
   // Default DAPUR (80mm) – sama seperti History
   const [printMode, setPrintMode] = useState<'resto' | 'dapur'>('dapur');
-
-  // ===== Notifikasi order baru =====
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [showNewOrderPopup, setShowNewOrderPopup] = useState(false);
-  const [incomingOrder, setIncomingOrder] = useState<any>(null);
-
   const [showLegend, setShowLegend] = useState(false);
   const [, setNowTick] = useState(0);
+  // ✅ ADD:
+  const {
+    show,           // boolean untuk buka/tutup popup
+    current,        // order yang sedang ditampilkan di popup
+    muted,          // status mute
+    needEnable,     // perlu tombol "Aktifkan Suara" (autoplay diblokir)
+    close,          // handler tutup popup + stop bunyi
+    replay,         // bunyikan lagi
+    enableSound,    // aktifkan suara (user gesture)
+    toggleMute,     // toggle mute
+  } = useNewOrderNotify({
+    // penting: bedakan nama channel dari channel realtime utama kamu
+    channelName: 'order-realtime-popup',
+    filter: 'isarchived=eq.false',
+    rateLimitMs: 2000,
+    soundSrc: '/bell.mp3',
+  });
 
   // ---------- opsi generator (identik dengan History) ----------
   function genOptsFor(mode: 'resto' | 'dapur', forEscpos: boolean) {
@@ -138,29 +153,29 @@ export default function OrderPage() {
     }
   };
 
-// ---------- actions ----------
-const handleDeleteOrder = async (orderId: number) => {
-  try {
-    // ❌ Jangan hapus detail item
-    // await supabase.from('OrderItem').delete().eq('orderId', orderId);
+  // ---------- actions ----------
+  const handleDeleteOrder = async (orderId: number) => {
+    try {
+      // ❌ Jangan hapus detail item
+      // await supabase.from('OrderItem').delete().eq('orderId', orderId);
 
-    // ✅ Cukup arsipkan order (opsional set status ke SUCCESS)
-    const { error: orderError } = await supabase
-      .from('Order')
-      .update({ isarchived: true /* , status: 'SUCCESS' */ })
-      .eq('id', orderId);
+      // ✅ Cukup arsipkan order (opsional set status ke SUCCESS)
+      const { error: orderError } = await supabase
+        .from('Order')
+        .update({ isarchived: true /* , status: 'SUCCESS' */ })
+        .eq('id', orderId);
 
-    if (orderError) {
-      console.error('Gagal mengarsipkan Order:', orderError.message);
-      return;
+      if (orderError) {
+        console.error('Gagal mengarsipkan Order:', orderError.message);
+        return;
+      }
+
+      // refresh list
+      fetchOrders();
+    } catch (err) {
+      console.error(err);
     }
-
-    // refresh list
-    fetchOrders();
-  } catch (err) {
-    console.error(err);
-  }
-};
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -240,16 +255,10 @@ const handleDeleteOrder = async (orderId: number) => {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'Order', filter: 'isarchived=eq.false' },
-        (payload) => {
-          fetchOrders();
-          setIncomingOrder(payload.new);
-          setShowNewOrderPopup(true);
-          const audio = audioRef.current;
-          if (audio) {
-            audio.currentTime = 0;
-            audio.play().catch(() => { });
-          }
+        () => {
+          fetchOrders(); // popup & audio sekarang diurus hook
         }
+
       )
       .on(
         'postgres_changes',
@@ -264,18 +273,6 @@ const handleDeleteOrder = async (orderId: number) => {
       void supabase.removeChannel(channel);
     };
   }, [loading]);
-
-  useEffect(() => {
-    const a = new Audio('/bell.mp3');
-    a.loop = true;
-    audioRef.current = a;
-    return () => {
-      try {
-        a.pause();
-      } catch { }
-      audioRef.current = null;
-    };
-  }, []);
 
   useEffect(() => {
     const id = setInterval(() => setNowTick((t) => t + 1), 60 * 1000);
@@ -470,27 +467,17 @@ const handleDeleteOrder = async (orderId: number) => {
         </div>
       )}
 
-      {/* Popup order baru */}
-      {showNewOrderPopup && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-white w-full max-w-md rounded-xl shadow-xl p-6 text-blue-900">
-            <h3 className="text-xl font-bold mb-2">Order baru masuk!</h3>
-            <p className="mb-4">
-              {incomingOrder?.customerName
-                ? `Dari: ${incomingOrder.customerName} • Room: ${incomingOrder.roomNumber ?? '-'}`
-                : 'Ada order baru yang masuk.'}
-            </p>
-            <div className="flex flex-wrap gap-3 justify-end">
-              <button onClick={() => { const a = audioRef.current; if (a) { a.currentTime = 0; a.play().catch(() => { }); } }} className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-black">
-                Bunyi lagi
-              </button>
-              <button onClick={() => { const a = audioRef.current; if (a) { try { a.pause(); a.currentTime = 0; } catch { } } setShowNewOrderPopup(false); }} className="px-4 py-2 rounded bg-red-500 hover:bg-red-600 text-white">
-                Matikan bunyi & Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <NewOrderPopup
+        open={show}
+        customerName={current?.customerName}
+        roomNumber={current?.roomNumber}
+        onClose={close}
+        onReplay={replay}
+        onEnableSound={enableSound}
+        showEnableSound={needEnable}
+        muted={muted}
+        onToggleMute={toggleMute}
+      />
 
       {/* Legend */}
       {showLegend && (
